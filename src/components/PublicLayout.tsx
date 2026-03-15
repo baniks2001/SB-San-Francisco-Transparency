@@ -114,11 +114,11 @@ const PublicLayout: React.FC = () => {
                 )}
               </div>
               <div className="ml-2 sm:ml-4 flex-1 min-w-0">
-                <h1 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-white whitespace-nowrap leading-tight overflow-hidden">
+                <h1 className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold text-white leading-tight">
                   {systemSettings?.systemName || 'Sangguniang Bayan Transparency Portal'}
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-300 truncate whitespace-nowrap">{systemSettings?.location || 'San Francisco, Southern Leyte'}</p>
               </div>
+              <p className="text-xs sm:text-sm text-gray-300 leading-tight">{systemSettings?.location || 'San Francisco, Southern Leyte'}</p>
             </div>
           </div>
 

@@ -304,16 +304,18 @@ const Home: React.FC = () => {
               {/* Seal Image */}
               {systemSettings?.officialSeal?.image ? (
                 <div className="mb-6">
-                  <img 
-                    src={getImageUrl(systemSettings.officialSeal.image)}
-                    alt="Official Seal"
-                    className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 mx-auto object-contain drop-shadow-lg"
-                  />
+                  <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96 mx-auto shadow-lg">
+                    <img 
+                      src={getImageUrl(systemSettings.officialSeal.image)}
+                      alt="Official Seal"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="mb-6">
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 mx-auto bg-yellow-700 rounded-full flex items-center justify-center">
-                    <svg className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-80 lg:h-80 xl:w-96 xl:h-96 mx-auto shadow-lg flex items-center justify-center">
+                    <svg className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 lg:w-44 lg:h-44 xl:w-48 xl:h-48 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                   </div>
