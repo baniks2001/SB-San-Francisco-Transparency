@@ -265,23 +265,23 @@ const AdminHomeContent: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <h1 className="text-3xl font-bold text-white mb-2">Home Content Management</h1>
-        <p className="text-gray-300">Manage carousel images, projects, activities, and organization structure</p>
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Home Content Management</h1>
+        <p className="text-gray-300 text-sm sm:text-base">Manage carousel images, projects, activities, and organization structure</p>
       </div>
 
       {/* Image Carousel */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">Image Carousel</h2>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+          <h2 className="text-lg sm:text-xl font-bold text-white">Image Carousel</h2>
           <button
             onClick={() => openModal('carouselImages')}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
           >
             Add Images
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {settings?.carouselImages?.map((image, index) => (
               <div key={index} className="relative group">

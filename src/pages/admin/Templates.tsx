@@ -378,15 +378,15 @@ const AdminTemplates: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <div className="flex justify-between items-center">
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Manage Templates</h1>
-            <p className="text-gray-300">Create and manage resolution and ordinance templates</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Manage Templates</h1>
+            <p className="text-gray-300 text-sm sm:text-base">Create and manage resolution and ordinance templates</p>
           </div>
           <button
             onClick={() => openModal()}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
           >
             Add Template
           </button>
@@ -407,7 +407,41 @@ const AdminTemplates: React.FC = () => {
 
       {/* Templates Table */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="lg:hidden">
+          {templates.map((template) => (
+            <div key={template._id} className="p-4 border-b border-gray-700 last:border-b-0">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white">{template.templateName}</h3>
+                    <p className="text-sm text-gray-400">
+                      {template.header?.texts?.length || 0} header texts, 
+                      {template.footer?.texts?.length || 0} footer texts
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => openModal(template)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(template._id)}
+                    className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-800">
               <tr>

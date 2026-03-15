@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Resolution, ResolutionTemplate } from '../../types';
 import api from '../../services/api';
+import { getImageUrl, getLogoUrl } from '../../utils/imageUtils';
 
 const AdminResolutions: React.FC = () => {
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
@@ -525,9 +526,7 @@ const AdminResolutions: React.FC = () => {
         <!-- Header -->
         <div class="header">
           ${template.header?.logos?.map(logo => {
-            const logoSrc = logo.url.startsWith('data:') ? logo.url : 
-                           logo.url.startsWith('http') ? logo.url : 
-                           `http://localhost:5000${logo.url}`;
+            const logoSrc = getLogoUrl(logo.url);
             return logo.url ? `<img src="${logoSrc}" style="height: 60px; margin: 0 10px;" alt="Logo" />` : '';
           }).join('') || ''}
           ${template.header?.texts?.map(text => 
@@ -684,11 +683,7 @@ const AdminResolutions: React.FC = () => {
               logo.url && (
                 <img 
                   key={logo.id} 
-                  src={
-                    logo.url.startsWith('data:') ? logo.url : 
-                    logo.url.startsWith('http') ? logo.url : 
-                    `http://localhost:5000${logo.url}`
-                  } 
+                  src={getLogoUrl(logo.url)} 
                   alt="Logo" 
                   className="h-12 mx-2" 
                   onError={(e) => {
@@ -850,15 +845,15 @@ const AdminResolutions: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <div className="flex justify-between items-center">
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Manage Resolutions</h1>
-            <p className="text-gray-300">Create and manage municipal resolutions</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Manage Resolutions</h1>
+            <p className="text-gray-300 text-sm sm:text-base">Create and manage municipal resolutions</p>
           </div>
           <button
             onClick={() => openModal()}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
           >
             Add New Resolution
           </button>
@@ -873,7 +868,71 @@ const AdminResolutions: React.FC = () => {
 
       {/* Resolutions Table */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="lg:hidden">
+          {resolutions.map((resolution) => (
+            <div key={resolution._id} className="p-4 border-b border-gray-700 last:border-b-0">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-white">{resolution.resolutionNumber}</h3>
+                    <p className="text-sm text-gray-400">{resolution.series}</p>
+                  </div>
+                  <div className="flex flex-col items-end space-y-2">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      resolution.status === 'Approved' 
+                        ? 'bg-green-900 text-green-200' 
+                        : resolution.status === 'Pending'
+                        ? 'bg-yellow-900 text-yellow-200'
+                        : 'bg-gray-700 text-gray-300'
+                    }`}>
+                      {resolution.status}
+                    </span>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      resolution.isPublic 
+                        ? 'bg-blue-900 text-blue-200' 
+                        : 'bg-gray-700 text-gray-300'
+                    }`}>
+                      {resolution.isPublic ? 'Public' : 'Private'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-300 line-clamp-2">{resolution.title}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => openModal(resolution)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => viewDocument(resolution)}
+                    className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => printDocument(resolution)}
+                    className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700"
+                  >
+                    Print
+                  </button>
+                  <button
+                    onClick={() => handleDelete(resolution._id)}
+                    className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-800">
               <tr>
@@ -945,7 +1004,7 @@ const AdminResolutions: React.FC = () => {
                     </button>
                     {resolution.scannedCopy && (
                       <a
-                        href={`http://localhost:5000/uploads/${resolution.scannedCopy}`}
+                        href={getImageUrl(resolution.scannedCopy)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-purple-400 hover:text-purple-300 font-medium mr-3"

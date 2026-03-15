@@ -1,0 +1,105 @@
+// Enhanced URL utilities for better network handling
+export const getBaseUrl = (): string => {
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  
+  return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+};
+
+export const getApiBaseUrl = (): string => {
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  
+  // Check if we're running behind Nginx (same port)
+  // If the frontend and backend are on the same port, use /api
+  const currentPort = port || (protocol === 'https:' ? '443' : '80');
+  
+  // For development with separate ports
+  if (process.env.NODE_ENV === 'development' && 
+      (hostname === 'localhost' || hostname === '127.0.0.1') && 
+      currentPort !== '80' && currentPort !== '443') {
+    // Check if backend is running on port 5000 (traditional setup)
+    return `http://localhost:5000`;
+  }
+  
+  // For Nginx setup or production - use same port with /api prefix
+  return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+};
+
+export const getImageUrl = (imagePath: string): string => {
+  if (!imagePath) return '';
+  
+  // Remove leading slash if present
+  const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+  
+  // Handle different types of URLs
+  if (imagePath.startsWith('data:')) {
+    // Base64 encoded image
+    return imagePath;
+  }
+  
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    // Already a full URL
+    return imagePath;
+  }
+  
+  // For development with separate ports
+  if (process.env.NODE_ENV === 'development' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+      window.location.port !== '80' && window.location.port !== '443') {
+    // Check if backend is running on port 5000 (traditional setup)
+    return `http://localhost:5000/uploads/${cleanPath}`;
+  }
+  
+  // For Nginx setup or production - use same port
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}/uploads/${cleanPath}`;
+};
+
+export const getLogoUrl = (logoPath: string): string => {
+  if (!logoPath) return '';
+  
+  // Handle different types of URLs
+  if (logoPath.startsWith('data:')) {
+    // Base64 encoded image
+    return logoPath;
+  }
+  
+  if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+    // Already a full URL
+    return logoPath;
+  }
+  
+  // For development with separate ports
+  if (process.env.NODE_ENV === 'development' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+      window.location.port !== '80' && window.location.port !== '443') {
+    // Check if backend is running on port 5000 (traditional setup)
+    return `http://localhost:5000${logoPath}`;
+  }
+  
+  // For Nginx setup or production - use same port
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}${logoPath}`;
+};
+
+// Utility to get current network information
+export const getNetworkInfo = () => {
+  return {
+    protocol: window.location.protocol,
+    hostname: window.location.hostname,
+    port: window.location.port,
+    origin: window.location.origin,
+    apiBaseUrl: getApiBaseUrl(),
+    baseUrl: getBaseUrl()
+  };
+};
+
+// Debug helper to log network information
+export const debugNetworkInfo = () => {
+  const info = getNetworkInfo();
+  console.log('Network Information:', info);
+  return info;
+};

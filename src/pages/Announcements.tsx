@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SystemSettings } from '../types';
 import api from '../services/api';
+import { getImageUrl } from '../utils/imageUtils';
 
 const Announcements: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -206,7 +207,7 @@ const Announcements: React.FC = () => {
               {selectedAnnouncement.image && (
                 <div className="w-full">
                   <img
-                    src={`http://localhost:5000/uploads/${selectedAnnouncement.image}`}
+                    src={getImageUrl(selectedAnnouncement.image)}
                     alt={selectedAnnouncement.title}
                     className="w-full h-64 object-cover rounded-lg"
                   />

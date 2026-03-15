@@ -63,7 +63,7 @@ const PublicLayout: React.FC = () => {
       await login(loginForm.username, loginForm.password);
       setIsDropdownOpen(false);
       setLoginForm({ username: '', password: '' });
-      navigate('/admin/dashboard');
+      navigate('/admin');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
     } finally {
@@ -80,7 +80,7 @@ const PublicLayout: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             {/* Logos and System Name */}
             <div className="flex items-center">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 pr-2 sm:pr-3 border-r border-white">
                 {systemSettings?.systemLogos && systemSettings.systemLogos.length > 0 ? (
                   systemSettings.systemLogos.slice(0, 3).map((logo, index) => (
                     <img 
@@ -114,11 +114,11 @@ const PublicLayout: React.FC = () => {
                 )}
               </div>
               <div className="ml-2 sm:ml-4 flex-1 min-w-0">
-                <h1 className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold text-white leading-tight">
+                <h1 className="text-[8px] sm:text-[10px] md:text-xs lg:text-sm xl:text-base font-bold text-white leading-tight">
                   {systemSettings?.systemName || 'Sangguniang Bayan Transparency Portal'}
                 </h1>
+                <p className="text-[8px] sm:text-[10px] md:text-xs lg:text-sm xl:text-sm text-gray-300 leading-tight">{systemSettings?.location || 'San Francisco, Southern Leyte'}</p>
               </div>
-              <p className="text-xs sm:text-sm text-gray-300 leading-tight">{systemSettings?.location || 'San Francisco, Southern Leyte'}</p>
             </div>
           </div>
 

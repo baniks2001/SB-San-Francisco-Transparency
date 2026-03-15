@@ -39,61 +39,61 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-        <p className="text-gray-300">
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+        <p className="text-gray-300 text-sm sm:text-base">
           Welcome to the Sangguniang Bayan Transparency Portal Admin Dashboard
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <div className="bg-gray-900 rounded-lg shadow-lg p-4 border border-gray-800">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+        <div className="bg-gray-900 rounded-lg shadow-lg p-3 sm:p-4 border border-gray-800">
           <div className="text-center">
-            <span className="text-2xl mb-2 block">📄</span>
-            <div className="text-2xl font-bold text-yellow-400">{stats.resolutions}</div>
+            <span className="text-xl sm:text-2xl mb-2 block">📄</span>
+            <div className="text-xl sm:text-2xl font-bold text-yellow-400">{stats.resolutions}</div>
             <div className="text-xs text-gray-400 mt-1">Resolutions</div>
           </div>
         </div>
-        <div className="bg-gray-900 rounded-lg shadow-lg p-4 border border-gray-800">
+        <div className="bg-gray-900 rounded-lg shadow-lg p-3 sm:p-4 border border-gray-800">
           <div className="text-center">
-            <span className="text-2xl mb-2 block">📋</span>
-            <div className="text-2xl font-bold text-blue-400">{stats.ordinances}</div>
+            <span className="text-xl sm:text-2xl mb-2 block">📋</span>
+            <div className="text-xl sm:text-2xl font-bold text-blue-400">{stats.ordinances}</div>
             <div className="text-xs text-gray-400 mt-1">Ordinances</div>
           </div>
         </div>
-        <div className="bg-gray-900 rounded-lg shadow-lg p-4 border border-gray-800">
+        <div className="bg-gray-900 rounded-lg shadow-lg p-3 sm:p-4 border border-gray-800">
           <div className="text-center">
-            <span className="text-2xl mb-2 block">💰</span>
-            <div className="text-2xl font-bold text-green-400">{stats.procurements}</div>
+            <span className="text-xl sm:text-2xl mb-2 block">💰</span>
+            <div className="text-xl sm:text-2xl font-bold text-green-400">{stats.procurements}</div>
             <div className="text-xs text-gray-400 mt-1">Procurements</div>
           </div>
         </div>
-        <div className="bg-gray-900 rounded-lg shadow-lg p-4 border border-gray-800">
+        <div className="bg-gray-900 rounded-lg shadow-lg p-3 sm:p-4 border border-gray-800">
           <div className="text-center">
-            <span className="text-2xl mb-2 block">👥</span>
-            <div className="text-2xl font-bold text-purple-400">{stats.vacancies}</div>
+            <span className="text-xl sm:text-2xl mb-2 block">👥</span>
+            <div className="text-xl sm:text-2xl font-bold text-purple-400">{stats.vacancies}</div>
             <div className="text-xs text-gray-400 mt-1">Vacancies</div>
           </div>
         </div>
-        <div className="bg-gray-900 rounded-lg shadow-lg p-4 border border-gray-800">
+        <div className="bg-gray-900 rounded-lg shadow-lg p-3 sm:p-4 border border-gray-800">
           <div className="text-center">
-            <span className="text-2xl mb-2 block">📊</span>
-            <div className="text-2xl font-bold text-red-400">{stats.budgets}</div>
+            <span className="text-xl sm:text-2xl mb-2 block">📊</span>
+            <div className="text-xl sm:text-2xl font-bold text-red-400">{stats.budgets}</div>
             <div className="text-xs text-gray-400 mt-1">Budgets</div>
           </div>
         </div>
-        <div className="bg-gray-900 rounded-lg shadow-lg p-4 border border-gray-800">
+        <div className="bg-gray-900 rounded-lg shadow-lg p-3 sm:p-4 border border-gray-800">
           <div className="text-center">
-            <span className="text-2xl mb-2 block">📝</span>
-            <div className="text-2xl font-bold text-indigo-400">{stats.applications}</div>
+            <span className="text-xl sm:text-2xl mb-2 block">📝</span>
+            <div className="text-xl sm:text-2xl font-bold text-indigo-400">{stats.applications}</div>
             <div className="text-xs text-gray-400 mt-1">Applications</div>
           </div>
         </div>
-        <div className="bg-gray-900 rounded-lg shadow-lg p-4 border border-gray-800">
+        <div className="bg-gray-900 rounded-lg shadow-lg p-3 sm:p-4 border border-gray-800">
           <div className="text-center">
-            <span className="text-2xl mb-2 block">📢</span>
-            <div className="text-2xl font-bold text-orange-400">{stats.announcements}</div>
+            <span className="text-xl sm:text-2xl mb-2 block">📢</span>
+            <div className="text-xl sm:text-2xl font-bold text-orange-400">{stats.announcements}</div>
             <div className="text-xs text-gray-400 mt-1">Announcements</div>
           </div>
         </div>
@@ -101,26 +101,30 @@ const AdminDashboard: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">Quick Actions</h2>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700">
+          <h2 className="text-lg sm:text-xl font-bold text-white">Quick Actions</h2>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button className="flex items-center justify-center px-4 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition duration-200 shadow-lg">
-              <span className="mr-2">➕</span>
-              New Resolution
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <button className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition duration-200 shadow-lg text-xs sm:text-sm">
+              <span className="mr-1 sm:mr-2">➕</span>
+              <span className="hidden sm:inline">New Resolution</span>
+              <span className="sm:hidden">Resolution</span>
             </button>
-            <button className="flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 shadow-lg">
-              <span className="mr-2">➕</span>
-              New Ordinance
+            <button className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 shadow-lg text-xs sm:text-sm">
+              <span className="mr-1 sm:mr-2">➕</span>
+              <span className="hidden sm:inline">New Ordinance</span>
+              <span className="sm:hidden">Ordinance</span>
             </button>
-            <button className="flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 shadow-lg">
-              <span className="mr-2">➕</span>
-              New Procurement
+            <button className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 shadow-lg text-xs sm:text-sm">
+              <span className="mr-1 sm:mr-2">➕</span>
+              <span className="hidden sm:inline">New Procurement</span>
+              <span className="sm:hidden">Procurement</span>
             </button>
-            <button className="flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200 shadow-lg">
-              <span className="mr-2">➕</span>
-              New Vacancy
+            <button className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200 shadow-lg text-xs sm:text-sm">
+              <span className="mr-1 sm:mr-2">➕</span>
+              <span className="hidden sm:inline">New Vacancy</span>
+              <span className="sm:hidden">Vacancy</span>
             </button>
           </div>
         </div>
@@ -128,39 +132,39 @@ const AdminDashboard: React.FC = () => {
 
       {/* Recent Activity */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">Recent Activity</h2>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700">
+          <h2 className="text-lg sm:text-xl font-bold text-white">Recent Activity</h2>
         </div>
         <div className="divide-y divide-gray-700">
-          <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-800 transition-colors">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-800 transition-colors space-y-2 sm:space-y-0">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-4"></div>
-              <div>
-                <p className="text-sm font-medium text-white">New resolution approved</p>
-                <p className="text-xs text-gray-400">Resolution No. 007, Series 2025</p>
+              <div className="w-3 h-3 bg-green-500 rounded-full mr-3 sm:mr-4 flex-shrink-0"></div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white truncate">New resolution approved</p>
+                <p className="text-xs text-gray-400 truncate">Resolution No. 007, Series 2025</p>
               </div>
             </div>
-            <span className="text-xs text-gray-400">2 hours ago</span>
+            <span className="text-xs text-gray-400 flex-shrink-0">2 hours ago</span>
           </div>
-          <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-800 transition-colors">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-800 transition-colors space-y-2 sm:space-y-0">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-500 rounded-full mr-4"></div>
-              <div>
-                <p className="text-sm font-medium text-white">New ordinance created</p>
-                <p className="text-xs text-gray-400">Ordinance No. 001, Series 2025</p>
+              <div className="w-3 h-3 bg-blue-500 rounded-full mr-3 sm:mr-4 flex-shrink-0"></div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white truncate">New ordinance created</p>
+                <p className="text-xs text-gray-400 truncate">Ordinance No. 001, Series 2025</p>
               </div>
             </div>
-            <span className="text-xs text-gray-400">5 hours ago</span>
+            <span className="text-xs text-gray-400 flex-shrink-0">5 hours ago</span>
           </div>
-          <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-800 transition-colors">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-800 transition-colors space-y-2 sm:space-y-0">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-4"></div>
-              <div>
-                <p className="text-sm font-medium text-white">New job application received</p>
-                <p className="text-xs text-gray-400">Administrative Assistant position</p>
+              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3 sm:mr-4 flex-shrink-0"></div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white truncate">New job application received</p>
+                <p className="text-xs text-gray-400 truncate">Administrative Assistant position</p>
               </div>
             </div>
-            <span className="text-xs text-gray-400">1 day ago</span>
+            <span className="text-xs text-gray-400 flex-shrink-0">1 day ago</span>
           </div>
         </div>
       </div>

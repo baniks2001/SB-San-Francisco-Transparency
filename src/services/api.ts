@@ -23,18 +23,26 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || getApiBaseUrl();
 
+// Create axios instance with proper base URL handling
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and handle /api prefix
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // For Nginx setup, ensure /api prefix is properly handled
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl.includes(':5000') && !config.url?.startsWith('/api')) {
+      config.url = `/api${config.url}`;
+    }
+    
     return config;
   },
   (error) => {

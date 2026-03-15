@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Ordinance, ResolutionTemplate } from '../../types';
 import api from '../../services/api';
+import { getImageUrl } from '../../utils/imageUtils';
 
 const AdminOrdinances: React.FC = () => {
   const [ordinances, setOrdinances] = useState<Ordinance[]>([]);
@@ -466,15 +467,15 @@ const AdminOrdinances: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <div className="flex justify-between items-center">
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Manage Ordinances</h1>
-            <p className="text-gray-300">Create and manage municipal ordinances</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Manage Ordinances</h1>
+            <p className="text-gray-300 text-sm sm:text-base">Create and manage municipal ordinances</p>
           </div>
           <button
             onClick={() => openModal()}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
           >
             Add New Ordinance
           </button>
@@ -489,7 +490,69 @@ const AdminOrdinances: React.FC = () => {
 
       {/* Ordinances Table */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="lg:hidden">
+          {ordinances.map((ordinance) => (
+            <div key={ordinance._id} className="p-4 border-b border-gray-700 last:border-b-0">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-white">{ordinance.ordinanceNumber}</h3>
+                    <p className="text-sm text-gray-400">{ordinance.series}</p>
+                  </div>
+                  <div className="flex flex-col items-end space-y-2">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      ordinance.status === 'Approved' 
+                        ? 'bg-green-900 text-green-200' 
+                        : ordinance.status === 'Pending'
+                        ? 'bg-yellow-900 text-yellow-200'
+                        : 'bg-gray-700 text-gray-300'
+                    }`}>
+                      {ordinance.status}
+                    </span>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      ordinance.isPublic 
+                        ? 'bg-blue-900 text-blue-200' 
+                        : 'bg-gray-700 text-gray-300'
+                    }`}>
+                      {ordinance.isPublic ? 'Public' : 'Private'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-300 line-clamp-2">{ordinance.title}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => openModal(ordinance)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                  >
+                    Edit
+                  </button>
+                  {ordinance.scannedCopy && (
+                    <a
+                      href={getImageUrl(ordinance.scannedCopy)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700"
+                    >
+                      PDF
+                    </a>
+                  )}
+                  <button
+                    onClick={() => handleDelete(ordinance._id)}
+                    className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-800">
               <tr>
@@ -549,7 +612,7 @@ const AdminOrdinances: React.FC = () => {
                     </button>
                     {ordinance.scannedCopy && (
                       <a
-                        href={`http://localhost:5000/uploads/${ordinance.scannedCopy}`}
+                        href={getImageUrl(ordinance.scannedCopy)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-400 hover:text-blue-300 font-medium mr-3"

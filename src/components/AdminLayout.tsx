@@ -22,6 +22,7 @@ const AdminLayout: React.FC = () => {
     { name: 'Templates', path: '/admin/templates', icon: '📝' },
     { name: 'Procurement and Budget', path: '/admin/procurements', icon: '💰' },
     { name: 'Vacancy & Hiring', path: '/admin/vacancies', icon: '👥' },
+    { name: 'Applications', path: '/admin/applications', icon: '📋' },
     { name: 'Announcement', path: '/admin/announcements', icon: '📢' },
     ...(user?.role === 'System Administrator' ? [
       { name: 'Manage Accounts', path: '/admin/users', icon: '👤' },

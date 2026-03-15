@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { SystemSettings } from '../types';
 import { getImageUrl } from '../utils/imageUtils';
 import api, { apiWithRetry } from '../services/api';
@@ -639,12 +640,12 @@ const Home: React.FC = () => {
             )}
           </div>
           <div className="mt-4 sm:mt-6 text-center">
-            <button 
-              onClick={() => window.location.href = '/announcements'}
-              className="bg-yellow-600 text-white px-4 py-2 sm:px-6 sm:py-2 rounded-md hover:bg-yellow-700 transition-colors duration-200 text-sm sm:text-base"
+            <Link 
+              to="/announcements"
+              className="inline-block bg-yellow-600 text-white px-4 py-2 sm:px-6 sm:py-2 rounded-md hover:bg-yellow-700 transition-colors duration-200 text-sm sm:text-base"
             >
               View All Announcements
-            </button>
+            </Link>
           </div>
         </section>
       </div>

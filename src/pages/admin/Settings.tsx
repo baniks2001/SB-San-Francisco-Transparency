@@ -141,9 +141,9 @@ const AdminSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <h1 className="text-3xl font-bold text-white mb-2">System Settings</h1>
-        <p className="text-gray-300">Manage system configuration and content</p>
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">System Settings</h1>
+        <p className="text-gray-300 text-sm sm:text-base">Manage system configuration and content</p>
       </div>
 
       {/* System Information */}
@@ -151,8 +151,8 @@ const AdminSettings: React.FC = () => {
         <div className="px-6 py-4 border-b border-gray-700">
           <h2 className="text-xl font-bold text-white">System Information</h2>
         </div>
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm font-medium text-gray-300">System Name</label>
@@ -342,7 +342,7 @@ const AdminSettings: React.FC = () => {
           </button>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <h3 className="font-medium text-gray-300 mb-2">Monday</h3>
               <p className="text-white">{settings?.officeHours?.monday || '8:00 AM - 5:00 PM'}</p>
@@ -377,16 +377,16 @@ const AdminSettings: React.FC = () => {
 
       {/* Copyright Text */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">Footer Copyright Text</h2>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+          <h2 className="text-lg sm:text-xl font-bold text-white">Footer Copyright Text</h2>
           <button
             onClick={() => openModal('copyright')}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
           >
             Edit
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <p className="text-white">
             {settings?.copyrightText || `© ${new Date().getFullYear()} Sangguniang Bayan, San Francisco, Southern Leyte. All rights reserved.`}
           </p>

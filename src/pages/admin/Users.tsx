@@ -241,9 +241,9 @@ const AdminUsers: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <h1 className="text-3xl font-bold text-white mb-2">User Management</h1>
-        <p className="text-gray-300">Manage user accounts and position roles</p>
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">User Management</h1>
+        <p className="text-gray-300 text-sm sm:text-base">Manage user accounts and position roles</p>
       </div>
 
       {error && (

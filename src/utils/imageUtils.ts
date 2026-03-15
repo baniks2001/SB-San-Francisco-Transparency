@@ -1,27 +1,7 @@
-// Helper function for dynamic image URLs
-export const getImageUrl = (imagePath: string): string => {
-  if (!imagePath) return '';
-  
-  // Remove leading slash if present
-  const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-  
-  // Check if running on network vs localhost
-  const hostname = window.location.hostname;
-  
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `http://localhost:5000/uploads/${cleanPath}`;
-  } else {
-    return `http://${hostname}:5000/uploads/${cleanPath}`;
-  }
-};
+// Import enhanced URL utilities
+import { getImageUrl as getEnhancedImageUrl, getApiBaseUrl as getEnhancedApiUrl, getLogoUrl as getEnhancedLogoUrl } from './urlUtils';
 
-// Helper function for dynamic API base URL
-export const getApiUrl = (): string => {
-  const hostname = window.location.hostname;
-  
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:5000';
-  } else {
-    return `http://${hostname}:5000`;
-  }
-};
+// Re-export the enhanced functions for backward compatibility
+export const getImageUrl = getEnhancedImageUrl;
+export const getApiUrl = getEnhancedApiUrl;
+export const getLogoUrl = getEnhancedLogoUrl;

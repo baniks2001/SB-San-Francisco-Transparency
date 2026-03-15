@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Ordinance } from '../types';
 import api from '../services/api';
+import { getImageUrl } from '../utils/imageUtils';
 
 const Ordinances: React.FC = () => {
   const [ordinances, setOrdinances] = useState<Ordinance[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrdinance, setSelectedOrdinance] = useState<Ordinance | null>(null);
 
   useEffect(() => {
     const fetchOrdinances = async () => {
@@ -42,9 +44,7 @@ const Ordinances: React.FC = () => {
   };
 
   const handleViewOrdinance = (ordinance: Ordinance) => {
-    if (ordinance.scannedCopy) {
-      window.open(`http://localhost:5000/uploads/${ordinance.scannedCopy}`, '_blank');
-    }
+    setSelectedOrdinance(ordinance);
   };
 
   if (loading) {
@@ -71,7 +71,7 @@ const Ordinances: React.FC = () => {
       <div className="bg-white shadow rounded-md p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-black mb-2">Search Ordinances</label>
+            <label className="block text-sm font-medium text-white mb-2">Search Ordinances</label>
             <input
               type="text"
               placeholder="Search by title, number, or content..."
@@ -81,7 +81,7 @@ const Ordinances: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-2">Filter by Status</label>
+            <label className="block text-sm font-medium text-white mb-2">Filter by Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -104,8 +104,8 @@ const Ordinances: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-black mb-2">No ordinances found</h3>
-          <p className="text-black">Try adjusting your search or filter criteria</p>
+          <h3 className="text-lg font-medium text-white mb-2">No ordinances found</h3>
+          <p className="text-white">Try adjusting your search or filter criteria</p>
         </div>
       ) : (
         <div className="bg-white shadow overflow-hidden rounded-md">
@@ -172,6 +172,75 @@ const Ordinances: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+      {/* Document Modal */}
+      {selectedOrdinance && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedOrdinance.title}</h2>
+                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <span><strong>Ordinance No:</strong> {selectedOrdinance.ordinanceNumber}</span>
+                    <span><strong>Series:</strong> {selectedOrdinance.series}</span>
+                    <span><strong>Author:</strong> {selectedOrdinance.author}</span>
+                    <span><strong>Status:</strong> {selectedOrdinance.status}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedOrdinance(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Content</h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-gray-700 whitespace-pre-wrap">{selectedOrdinance.content}</p>
+                </div>
+              </div>
+              
+              {selectedOrdinance.scannedCopy && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Scanned Document</h3>
+                  <div className="bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={getImageUrl(selectedOrdinance.scannedCopy)}
+                      alt="Scanned Ordinance"
+                      className="w-full h-auto max-h-[600px] object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0Y1OUUwQiIvPgo8cGF0aCBkPSJNOCAxNkgxNlY4SDhWMTZaTTE2IDE2SDI0VjhIMTZWMTZaTTggMjRIMTZWMTZIOFYyNVpNMTYgMjRIMjRWMTZIMTZWMjRaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setSelectedOrdinance(null)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                {selectedOrdinance.scannedCopy && (
+                  <a
+                    href={getImageUrl(selectedOrdinance.scannedCopy)}
+                    download
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Download
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

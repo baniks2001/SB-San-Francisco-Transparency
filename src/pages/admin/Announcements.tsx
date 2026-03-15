@@ -126,15 +126,15 @@ const AdminAnnouncements: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-6 border border-gray-800">
-        <div className="flex justify-between items-center">
+      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Manage Announcements</h1>
-            <p className="text-gray-300">Create and manage public announcements</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Manage Announcements</h1>
+            <p className="text-gray-300 text-sm sm:text-base">Create and manage public announcements</p>
           </div>
           <button
             onClick={() => openModal()}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
           >
             Add Announcement
           </button>
