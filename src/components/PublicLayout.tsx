@@ -187,8 +187,8 @@ const PublicLayout: React.FC = () => {
                     {formatTime(currentTime)}
                   </div>
 
-                  {/* Login Dropdown */}
-                  <div className="relative">
+                  {/* Login Dropdown - Hidden on mobile, shown on desktop */}
+                  <div className="relative hidden sm:block">
                     <button
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                       className="flex items-center text-xs sm:text-sm font-medium text-gray-300 hover:text-yellow-400 focus:outline-none"
