@@ -1,0 +1,12 @@
+# Cloudflare Pages Redirects
+# Handle React Router - redirect all non-static routes to index.html
+/*    /index.html   200
+
+# API routes - redirect to your backend server
+/api/*  https://your-backend-domain.com/api/:splat  200
+
+# Upload routes - redirect to your backend server  
+/uploads/*  https://your-backend-domain.com/uploads/:splat  200
+
+# Health check redirect
+/health  https://your-backend-domain.com/health  200
