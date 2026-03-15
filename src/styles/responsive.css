@@ -1,0 +1,183 @@
+/* Responsive Design Enhancements */
+
+/* Mobile-first approach */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .table-responsive {
+    overflow-x: auto;
+  }
+  
+  .modal {
+    width: 95% !important;
+    margin: 1rem auto !important;
+  }
+  
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .hidden-mobile {
+    display: none;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  .modal {
+    width: 90% !important;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1025px) {
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+}
+
+/* Theme customization */
+:root {
+  --primary-color: #F59E0B;
+  --secondary-color: #92400E;
+  --accent-color: #FFFFFF;
+  --background-color: #FFFFFF;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --border-color: #E5E7EB;
+  --success-color: #10B981;
+  --warning-color: #F59E0B;
+  --error-color: #EF4444;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #1F2937;
+    --text-primary: #F9FAFB;
+    --text-secondary: #D1D5DB;
+    --border-color: #374151;
+  }
+  
+  .bg-white {
+    background-color: var(--background-color) !important;
+  }
+  
+  .text-gray-900 {
+    color: var(--text-primary) !important;
+  }
+  
+  .text-gray-600 {
+    color: var(--text-secondary) !important;
+  }
+  
+  .border-gray-200 {
+    border-color: var(--border-color) !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+  
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  
+  table {
+    page-break-inside: auto;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  td, th {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --primary-color: #000000;
+    --secondary-color: #FFFFFF;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --border-color: #000000;
+  }
+}
+
+/* Focus visible for better keyboard navigation */
+.focus-visible:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Loading animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-color);
+}

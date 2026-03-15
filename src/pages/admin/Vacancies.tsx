@@ -1,0 +1,5 @@
+import React from 'react';
+const AdminVacancies: React.FC = () => {
+  return <div className="p-6"><h1 className="text-3xl font-bold text-gray-900 mb-6">Manage Vacancies & Applications</h1></div>;
+};
+export default AdminVacancies;
