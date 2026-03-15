@@ -6,8 +6,8 @@ export interface IResolution extends Document {
   title?: string;
   content: string;
   secondContent?: string;
-  present?: string;
-  absent?: string;
+  present?: Array<{name: string, position: string}>;
+  absent?: Array<{name: string, position: string}>;
   templateId?: mongoose.Types.ObjectId;
   status: 'Draft' | 'Pending' | 'Approved';
   isPublic: boolean;
@@ -15,6 +15,7 @@ export interface IResolution extends Document {
   signatories: Array<{
     name: string;
     position: string;
+    optionalText?: string;
     alignment: 'Left' | 'Center' | 'Right' | 'Justify';
     isBold?: boolean;
     isUnderline?: boolean;
@@ -25,6 +26,7 @@ export interface IResolution extends Document {
   attestedBy: Array<{
     name: string;
     position: string;
+    optionalText?: string;
     alignment: 'Left' | 'Center' | 'Right' | 'Justify';
     isBold?: boolean;
     isUnderline?: boolean;
@@ -77,6 +79,7 @@ export interface IResolution extends Document {
 const signatorySchema = new Schema({
   name: { type: String, required: true },
   position: { type: String, required: true },
+  optionalText: { type: String },
   alignment: { 
     type: String, 
     enum: ['Left', 'Center', 'Right', 'Justify'], 
@@ -124,12 +127,14 @@ const resolutionSchema = new Schema<IResolution>({
   secondContent: {
     type: String
   },
-  present: {
-    type: String
-  },
-  absent: {
-    type: String
-  },
+  present: [{
+    name: { type: String, required: true },
+    position: { type: String, required: true }
+  }],
+  absent: [{
+    name: { type: String, required: true },
+    position: { type: String, required: true }
+  }],
   templateId: {
     type: Schema.Types.ObjectId,
     ref: 'ResolutionTemplate'

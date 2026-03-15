@@ -19,6 +19,11 @@ export interface ISystemSettings extends Document {
     email: string;
     address: string;
   };
+  mapLocation?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
   location?: string;
   transparencyTitle?: string;
   officialSeal?: {
@@ -70,6 +75,12 @@ const contactInfoSchema = new Schema({
   mobileNumbers: [{ type: String }],
   email: { type: String, required: true },
   address: { type: String, required: true }
+}, { _id: false });
+
+const mapLocationSchema = new Schema({
+  latitude: { type: Number },
+  longitude: { type: Number },
+  address: { type: String }
 }, { _id: false });
 
 const orgStructureSchema = new Schema({
@@ -128,6 +139,10 @@ const systemSettingsSchema = new Schema<ISystemSettings>({
   contactInfo: {
     type: contactInfoSchema,
     default: () => ({ mobileNumbers: [], email: '', address: '' })
+  },
+  mapLocation: {
+    type: mapLocationSchema,
+    default: null
   },
   location: {
     type: String,

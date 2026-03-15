@@ -11,6 +11,8 @@ const AdminSettings: React.FC = () => {
   const [editValue, setEditValue] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [mapLocation, setMapLocation] = useState({ latitude: '', longitude: '', address: '' });
+  const [contactInfo, setContactInfo] = useState({ mobileNumbers: [''], email: '', address: '' });
 
   useEffect(() => {
     fetchSettings();
@@ -32,6 +34,25 @@ const AdminSettings: React.FC = () => {
     setEditValue(getFieldValue(field));
     setSelectedFile(null);
     setSelectedFiles([]);
+    
+    // Initialize map location values if opening map modal
+    if (field === 'mapLocation') {
+      setMapLocation({
+        latitude: settings?.mapLocation?.latitude?.toString() || '',
+        longitude: settings?.mapLocation?.longitude?.toString() || '',
+        address: settings?.contactInfo?.address || settings?.mapLocation?.address || ''
+      });
+    }
+    
+    // Initialize contact info values if opening contact modal
+    if (field === 'contact') {
+      setContactInfo({
+        mobileNumbers: settings?.contactInfo?.mobileNumbers || [''],
+        email: settings?.contactInfo?.email || '',
+        address: settings?.contactInfo?.address || ''
+      });
+    }
+    
     setIsModalOpen(true);
   };
 
@@ -54,18 +75,16 @@ const AdminSettings: React.FC = () => {
         return settings.transparencyTitle || '';
       case 'location':
         return settings.location || '';
-      case 'aboutOffice':
-        return settings.aboutOffice || '';
-      case 'mission':
-        return settings.mission || '';
-      case 'vision':
-        return settings.vision || '';
-      case 'keyResponsibilities':
-        return settings.keyResponsibilities || '';
       case 'contact':
         return settings.contactInfo?.email || '';
       case 'copyright':
         return settings.copyrightText || '';
+      case 'mapLatitude':
+        return settings.mapLocation?.latitude?.toString() || '';
+      case 'mapLongitude':
+        return settings.mapLocation?.longitude?.toString() || '';
+      case 'mapAddress':
+        return settings.mapLocation?.address || '';
       default:
         return '';
     }
@@ -102,20 +121,34 @@ const AdminSettings: React.FC = () => {
           case 'location':
             updateData.location = editValue;
             break;
-          case 'aboutOffice':
-            updateData.aboutOffice = editValue;
-            break;
-          case 'mission':
-            updateData.mission = editValue;
-            break;
-          case 'vision':
-            updateData.vision = editValue;
-            break;
-          case 'keyResponsibilities':
-            updateData.keyResponsibilities = editValue;
-            break;
           case 'copyright':
             updateData.copyrightText = editValue;
+            break;
+          case 'mapLocation':
+            updateData.mapLocation = {
+              latitude: parseFloat(mapLocation.latitude) || 0,
+              longitude: parseFloat(mapLocation.longitude) || 0,
+              address: mapLocation.address
+            };
+            // Also update contact info address to match map address
+            updateData.contactInfo = {
+              ...settings?.contactInfo,
+              address: mapLocation.address
+            };
+            break;
+          case 'contact':
+            updateData.contactInfo = {
+              mobileNumbers: contactInfo.mobileNumbers.filter(num => num.trim() !== ''),
+              email: contactInfo.email,
+              address: contactInfo.address
+            };
+            // Also update map location address to match contact address
+            if (settings?.mapLocation) {
+              updateData.mapLocation = {
+                ...settings.mapLocation,
+                address: contactInfo.address
+              };
+            }
             break;
         }
         
@@ -235,70 +268,6 @@ const AdminSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* About Office */}
-      <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">About Office</h2>
-          <button
-            onClick={() => openModal('aboutOffice')}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
-          >
-            Edit
-          </button>
-        </div>
-        <div className="p-6">
-          <p className="text-white whitespace-pre-wrap">
-            {settings?.aboutOffice || 'No about information available'}
-          </p>
-        </div>
-      </div>
-
-      {/* Mission, Vision, Key Responsibilities */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-white">Mission</h2>
-            <button
-              onClick={() => openModal('mission')}
-              className="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-colors text-sm"
-            >
-              Edit
-            </button>
-          </div>
-          <div className="p-6">
-            <p className="text-white">{settings?.mission || 'No mission statement'}</p>
-          </div>
-        </div>
-        <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-white">Vision</h2>
-            <button
-              onClick={() => openModal('vision')}
-              className="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-colors text-sm"
-            >
-              Edit
-            </button>
-          </div>
-          <div className="p-6">
-            <p className="text-white">{settings?.vision || 'No vision statement'}</p>
-          </div>
-        </div>
-        <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-white">Key Responsibilities</h2>
-            <button
-              onClick={() => openModal('keyResponsibilities')}
-              className="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-colors text-sm"
-            >
-              Edit
-            </button>
-          </div>
-          <div className="p-6">
-            <p className="text-white">{settings?.keyResponsibilities || 'No key responsibilities defined'}</p>
-          </div>
-        </div>
-      </div>
-
       {/* Contact Information */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
@@ -393,6 +362,47 @@ const AdminSettings: React.FC = () => {
         </div>
       </div>
 
+      {/* Map Location */}
+      <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700 flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+          <h2 className="text-lg sm:text-xl font-bold text-white">Google Maps Location</h2>
+          <button
+            onClick={() => openModal('mapLocation')}
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
+          >
+            Edit Location
+          </button>
+        </div>
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <h3 className="font-medium text-gray-300 mb-2">Latitude</h3>
+              <p className="text-white">{settings?.mapLocation?.latitude || 'Not set'}</p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-300 mb-2">Longitude</h3>
+              <p className="text-white">{settings?.mapLocation?.longitude || 'Not set'}</p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-300 mb-2">Address</h3>
+              <p className="text-white">{settings?.contactInfo?.address || settings?.mapLocation?.address || 'Not set'}</p>
+            </div>
+          </div>
+          {settings?.mapLocation && (
+            <div className="mt-4">
+              <a
+                href={`https://www.google.com/maps?q=${settings.mapLocation.latitude},${settings.mapLocation.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-yellow-400 hover:text-yellow-300 text-sm underline"
+              >
+                View on Google Maps
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -425,13 +435,108 @@ const AdminSettings: React.FC = () => {
                       Select up to {3 - (settings?.systemLogos?.length || 0)} logo files (Max 3 total)
                     </p>
                   </div>
-                ) : modalField === 'aboutOffice' || modalField === 'mission' || modalField === 'vision' || modalField === 'keyResponsibilities' || modalField === 'copyright' ? (
+                ) : modalField === 'copyright' ? (
                   <textarea
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     rows={4}
                   />
+                ) : modalField === 'mapLocation' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Latitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={mapLocation.latitude}
+                        onChange={(e) => setMapLocation({...mapLocation, latitude: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        placeholder="e.g., 10.123456"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Longitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={mapLocation.longitude}
+                        onChange={(e) => setMapLocation({...mapLocation, longitude: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        placeholder="e.g., 124.123456"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Address</label>
+                      <textarea
+                        value={mapLocation.address}
+                        onChange={(e) => setMapLocation({...mapLocation, address: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        rows={3}
+                        placeholder="e.g., Sangguniang Bayan Building, San Francisco, Southern Leyte"
+                      />
+                    </div>
+                  </div>
+                ) : modalField === 'contact' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Mobile Numbers</label>
+                      {contactInfo.mobileNumbers.map((phone, index) => (
+                        <div key={index} className="flex items-center space-x-2 mb-2">
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => {
+                              const newNumbers = [...contactInfo.mobileNumbers];
+                              newNumbers[index] = e.target.value;
+                              setContactInfo({...contactInfo, mobileNumbers: newNumbers});
+                            }}
+                            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            placeholder="e.g., +63 XXX XXX XXXX"
+                          />
+                          {contactInfo.mobileNumbers.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newNumbers = contactInfo.mobileNumbers.filter((_, i) => i !== index);
+                                setContactInfo({...contactInfo, mobileNumbers: newNumbers.length > 0 ? newNumbers : ['']});
+                              }}
+                              className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setContactInfo({...contactInfo, mobileNumbers: [...contactInfo.mobileNumbers, '']})}
+                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                      >
+                        Add Mobile Number
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={contactInfo.email}
+                        onChange={(e) => setContactInfo({...contactInfo, email: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        placeholder="e.g., info@sanfranciscosl.gov.ph"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Address</label>
+                      <textarea
+                        value={contactInfo.address}
+                        onChange={(e) => setContactInfo({...contactInfo, address: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        rows={3}
+                        placeholder="e.g., Sangguniang Bayan Building, San Francisco, Southern Leyte"
+                      />
+                    </div>
+                  </div>
                 ) : (
                   <input
                     type="text"

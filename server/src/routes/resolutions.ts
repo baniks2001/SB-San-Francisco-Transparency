@@ -82,13 +82,39 @@ router.post('/',
         status = 'Draft',
         isPublic = false,
         signatories = [],
+        attestedBy = [],
         paperSize = 'A4',
         pageCount = 1,
         presentFormat,
         absentFormat,
         secondContentFormat,
-        signatoriesFormat
+        signatoriesFormat,
+        attestedByFormat
       } = req.body;
+
+      // Handle backward compatibility for present/absent
+      let processedPresent = present;
+      let processedAbsent = absent;
+      
+      // If present/absent are strings (old format), convert to arrays
+      if (typeof present === 'string' && present) {
+        // Try to parse as JSON first, otherwise treat as simple string
+        try {
+          const parsed = JSON.parse(present);
+          processedPresent = Array.isArray(parsed) ? parsed : [{ name: present, position: 'Member' }];
+        } catch {
+          processedPresent = [{ name: present, position: 'Member' }];
+        }
+      }
+      
+      if (typeof absent === 'string' && absent) {
+        try {
+          const parsed = JSON.parse(absent);
+          processedAbsent = Array.isArray(parsed) ? parsed : [{ name: absent, position: 'Member' }];
+        } catch {
+          processedAbsent = [{ name: absent, position: 'Member' }];
+        }
+      }
 
       const resolutionData = {
         resolutionNumber,
@@ -96,12 +122,13 @@ router.post('/',
         title,
         content,
         secondContent,
-        present,
-        absent,
+        present: processedPresent,
+        absent: processedAbsent,
         templateId,
         status,
         isPublic,
         signatories,
+        attestedBy,
         paperSize,
         pageCount,
         presentFormat: presentFormat || {
@@ -126,6 +153,13 @@ router.post('/',
           isUnderline: false
         },
         signatoriesFormat: signatoriesFormat || {
+          fontSize: 12,
+          fontFamily: 'Arial',
+          alignment: 'Left',
+          isBold: false,
+          isUnderline: false
+        },
+        attestedByFormat: attestedByFormat || {
           fontSize: 12,
           fontFamily: 'Arial',
           alignment: 'Left',
@@ -167,9 +201,40 @@ router.put('/:id',
         return res.status(400).json({ errors: errors.array() });
       }
 
+      // Handle backward compatibility for present/absent
+      const updateData = { ...req.body };
+      
+      if (updateData.present && typeof updateData.present === 'string') {
+        try {
+          const parsed = JSON.parse(updateData.present);
+          updateData.present = Array.isArray(parsed) ? parsed : [{ name: updateData.present, position: 'Member' }];
+        } catch {
+          updateData.present = [{ name: updateData.present, position: 'Member' }];
+        }
+      }
+      
+      if (updateData.absent && typeof updateData.absent === 'string') {
+        try {
+          const parsed = JSON.parse(updateData.absent);
+          updateData.absent = Array.isArray(parsed) ? parsed : [{ name: updateData.absent, position: 'Member' }];
+        } catch {
+          updateData.absent = [{ name: updateData.absent, position: 'Member' }];
+        }
+      }
+      
+      // Handle attestedBy backward compatibility
+      if (updateData.attestedBy && typeof updateData.attestedBy === 'string') {
+        try {
+          const parsed = JSON.parse(updateData.attestedBy);
+          updateData.attestedBy = Array.isArray(parsed) ? parsed : [{ name: updateData.attestedBy, position: 'Member' }];
+        } catch {
+          updateData.attestedBy = [{ name: updateData.attestedBy, position: 'Member' }];
+        }
+      }
+
       const resolution = await Resolution.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        updateData,
         { returnDocument: 'after' }
       );
 

@@ -1,28 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Resolution } from '../types';
+import { Resolution, ResolutionTemplate } from '../types';
 import api from '../services/api';
-import { getImageUrl } from '../utils/imageUtils';
+import { getImageUrl, getLogoUrl } from '../utils/imageUtils';
 
 const Resolutions: React.FC = () => {
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
+  const [templates, setTemplates] = useState<ResolutionTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResolution, setSelectedResolution] = useState<Resolution | null>(null);
 
   useEffect(() => {
-    const fetchResolutions = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/resolutions');
-        setResolutions(response.data);
+        const [resolutionsResponse, templatesResponse] = await Promise.all([
+          api.get('/resolutions'),
+          api.get('/templates')
+        ]);
+        setResolutions(resolutionsResponse.data);
+        setTemplates(templatesResponse.data);
       } catch (error) {
-        console.error('Failed to fetch resolutions:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchResolutions();
+    fetchData();
   }, []);
 
   const filteredResolutions = resolutions.filter((resolution) => {
@@ -45,6 +50,163 @@ const Resolutions: React.FC = () => {
 
   const handleViewResolution = (resolution: Resolution) => {
     setSelectedResolution(resolution);
+  };
+
+  const viewDocument = (resolution: Resolution) => {
+    console.log('Viewing resolution:', resolution);
+    console.log('Resolution templateId:', resolution.templateId);
+    console.log('Available templates:', templates);
+    
+    // Find the template for this resolution
+    const selectedTemplate = templates.find(t => t._id === resolution.templateId);
+    
+    if (!selectedTemplate) {
+      console.error('No template found for this resolution');
+      alert('No template is assigned to this resolution. Please contact the administrator.');
+      return;
+    }
+    
+    // Create a new window to display the formatted document
+    const documentWindow = window.open('', '_blank');
+    if (documentWindow) {
+      const documentContent = generateDocumentHTML(resolution, selectedTemplate);
+      documentWindow.document.write(documentContent);
+      documentWindow.document.title = `Resolution ${resolution.resolutionNumber}`;
+      documentWindow.document.close();
+    }
+  };
+
+  const printDocument = (resolution: Resolution) => {
+    // Handle templateId
+    const templateId = resolution.templateId;
+    
+    if (!templateId) {
+      console.error('No template assigned to this resolution');
+      alert('No template is assigned to this resolution. Please contact the administrator.');
+      return;
+    }
+    
+    // Find the template
+    const selectedTemplate = templates.find(t => t._id === templateId);
+    
+    if (!selectedTemplate) {
+      console.error('No template found for this resolution');
+      alert('No template is assigned to this resolution. Please contact the administrator.');
+      return;
+    }
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const documentContent = generateDocumentHTML(resolution, selectedTemplate);
+      printWindow.document.write(documentContent);
+      printWindow.document.title = `Resolution ${resolution.resolutionNumber}`;
+      printWindow.document.close();
+      
+      // Wait for content to load, then print
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    }
+  };
+
+  const generateDocumentHTML = (resolution: Resolution, template: ResolutionTemplate): string => {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Resolution ${resolution.resolutionNumber}</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            margin: 40px; 
+            color: #000;
+            background: white;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+          }
+          .title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin: 20px 0; 
+            text-align: center;
+          }
+          .content-section { margin: 20px 0; }
+          .content-text { 
+            padding: 10px 0; 
+            line-height: 1.6;
+          }
+          .signatories { margin-top: 40px; }
+          .signatory { margin: 15px 0; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <!-- Header -->
+        <div class="header">
+          ${template.header?.logos?.map(logo => {
+            const logoSrc = getLogoUrl(logo.url);
+            return logo.url ? `<img src="${logoSrc}" style="height: 60px; margin: 0 10px;" alt="Logo" />` : '';
+          }).join('') || ''}
+          ${template.header?.texts?.map(text => 
+            `<div style="font-size: ${text.fontSize}px; font-family: ${text.fontFamily}; color: ${text.fontColor || '#000'}; text-align: ${text.alignment.toLowerCase()}; font-weight: ${text.isBold ? 'bold' : 'normal'}; font-style: ${text.isItalic ? 'italic' : 'normal'}; text-decoration: ${text.isUnderline ? 'underline' : 'none'}; margin: 5px 0;">${text.text}</div>`
+          ).join('') || ''}
+        </div>
+
+        <!-- Present and Absent at top -->
+        <div class="content-section">
+          <label>Present:</label>
+          <div class="content-text">
+            <!-- Present members will be listed here -->
+          </div>
+        </div>
+
+        <div class="content-section">
+          <label>Absent:</label>
+          <div class="content-text">
+            <!-- Absent members will be listed here -->
+          </div>
+        </div>
+
+        <!-- Resolution Content -->
+        <div class="title-section">
+          <h2 style="font-size: 20px; font-weight: bold;">RESOLUTION NO. ${resolution.resolutionNumber}, Series ${resolution.series}</h2>
+        </div>
+
+        <div class="content-section">
+          <div class="content-text">${resolution.content || ''}</div>
+        </div>
+
+        <div class="content-section">
+          <div class="content-text">${resolution.content || ''}</div>
+        </div>
+
+        <!-- Signatories -->
+        <div class="signatories">
+          ${template.footer?.texts?.map(text => 
+            `<div style="font-size: ${text.fontSize}px; font-family: ${text.fontFamily}; color: ${text.fontColor || '#000'}; text-align: ${text.alignment.toLowerCase()}; font-weight: ${text.isBold ? 'bold' : 'normal'}; font-style: ${text.isItalic ? 'italic' : 'normal'}; text-decoration: ${text.isUnderline ? 'underline' : 'none'}; margin: 5px 0;">${text.text}</div>`
+          ).join('') || ''}
+          
+          <div class="signatory">
+            <div style="text-align: center; margin-top: 30px;">
+              <div style="border-bottom: 1px solid #000; width: 200px; margin: 0 auto;"></div>
+              <div style="margin-top: 5px;">${resolution.author || 'Sangguniang Bayan Member'}</div>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   };
 
   if (loading) {
@@ -163,8 +325,26 @@ const Resolutions: React.FC = () => {
                         >
                           View
                         </button>
+                        <button
+                          onClick={() => viewDocument(resolution)}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          View Document
+                        </button>
+                        <button
+                          onClick={() => printDocument(resolution)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Print
+                        </button>
                         {resolution.scannedCopy && (
-                          <button className="text-green-600 hover:text-green-900">Download</button>
+                          <a
+                            href={getImageUrl(resolution.scannedCopy)}
+                            download
+                            className="text-purple-600 hover:text-purple-900"
+                          >
+                            Download
+                          </a>
                         )}
                       </div>
                     </td>

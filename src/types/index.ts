@@ -206,6 +206,11 @@ export interface SystemSettings {
     createdAt: string;
   }>;
   copyrightText?: string;
+  mapLocation?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

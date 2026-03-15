@@ -254,7 +254,7 @@ const Home: React.FC = () => {
     <div className="flex-1 bg-gray-50">
       {/* Image Carousel */}
       {systemSettings?.carouselImages && systemSettings.carouselImages.length > 0 && (
-        <div className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-200 overflow-hidden">
+        <div className="relative h-[300px] sm:h-[350px] md:h-[400px] lg:h-[450px] bg-gray-200 overflow-hidden">
           <img
             src={getImageUrl(systemSettings.carouselImages[currentImageIndex])}
             alt="Carousel"
@@ -383,7 +383,7 @@ const Home: React.FC = () => {
         {memoizedProjectImages.length > 0 && (
           <section className="mb-8 sm:mb-12">
             <h2 className="text-xl sm:text-2xl font-bold text-black mb-2">News, Projects, & Activities</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-6" style={{ contain: 'layout' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-6">
               {memoizedProjectImages.map((project, index) => (
                 <div 
                   key={index} 

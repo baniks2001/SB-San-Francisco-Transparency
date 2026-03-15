@@ -14,8 +14,8 @@ const AdminResolutions: React.FC = () => {
     title: '', // Keep title for header display only
     content: '',
     secondContent: '',
-    present: '',
-    absent: '',
+    present: [] as Array<{name: string, position: string}>,
+    absent: [] as Array<{name: string, position: string}>,
     status: 'Draft' as 'Draft' | 'Pending' | 'Approved',
     isPublic: false,
     templateId: '',
@@ -23,15 +23,17 @@ const AdminResolutions: React.FC = () => {
     signatories: [] as Array<{
       name: string;
       position: string;
+      optionalText?: string;
       alignment: 'Left' | 'Center' | 'Right' | 'Justify';
-      isBold?: boolean;
-      isUnderline?: boolean;
-      fontSize?: number;
-      fontFamily?: string;
+      fontSize: number;
+      fontFamily: string;
+      isBold: boolean;
+      isUnderline: boolean;
     }>,
     attestedBy: [] as Array<{
       name: string;
       position: string;
+      optionalText?: string;
       alignment: 'Left' | 'Center' | 'Right' | 'Justify';
       isBold?: boolean;
       isUnderline?: boolean;
@@ -195,13 +197,22 @@ const AdminResolutions: React.FC = () => {
         title: resolution.title,
         content: resolution.content,
         secondContent: (resolution as any).secondContent || '',
-        present: (resolution as any).present || '',
-        absent: (resolution as any).absent || '',
+        present: (resolution as any).present || [],
+        absent: (resolution as any).absent || [],
         status: resolution.status,
         isPublic: resolution.isPublic,
         templateId: resolution.templateId || '',
         paperSize: resolution.paperSize || 'A4',
-        signatories: resolution.signatories || [],
+        signatories: (resolution.signatories || []).map(sig => ({
+          name: sig.name,
+          position: sig.position,
+          optionalText: '',
+          alignment: sig.alignment || 'Left',
+          fontSize: sig.fontSize || 14,
+          fontFamily: sig.fontFamily || 'Arial',
+          isBold: sig.isBold || false,
+          isUnderline: sig.isUnderline || false
+        })) || [],
         attestedBy: (resolution as any).attestedBy || [],
         resolutionNumberFormat: {
           fontSize: 20,
@@ -268,8 +279,8 @@ const AdminResolutions: React.FC = () => {
         title: '',
         content: '',
         secondContent: '',
-        present: '',
-        absent: '',
+        present: [],
+        absent: [],
         status: 'Draft',
         isPublic: false,
         templateId: '',
@@ -348,8 +359,8 @@ const AdminResolutions: React.FC = () => {
       title: '',
       content: '',
       secondContent: '',
-      present: '',
-      absent: '',
+      present: [],
+      absent: [],
       status: 'Draft',
       isPublic: false,
       templateId: '',
@@ -454,25 +465,75 @@ const AdminResolutions: React.FC = () => {
     }
   };
 
+  const downloadDocument = (resolution: Resolution, format: 'pdf' | 'word') => {
+    // Handle both string and ObjectId formats
+    let templateId: string;
+    if (typeof resolution.templateId === 'string') {
+      templateId = resolution.templateId;
+    } else if (resolution.templateId && typeof resolution.templateId === 'object' && resolution.templateId !== null) {
+      templateId = (resolution.templateId as any)._id || (resolution.templateId as any).toString();
+    } else {
+      console.error('Invalid templateId:', resolution.templateId);
+      return;
+    }
+    
+    const selectedTemplate = templates.find(t => t._id === templateId);
+    if (!selectedTemplate) {
+      console.error('Template not found:', templateId);
+      return;
+    }
+    
+    const documentContent = generateDocumentHTML(resolution, selectedTemplate);
+    
+    if (format === 'pdf') {
+      // For PDF, we'll use the browser's print to PDF functionality
+      const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+      if (printWindow) {
+        printWindow.document.write(documentContent);
+        printWindow.document.title = `Resolution ${resolution.resolutionNumber}`;
+        printWindow.document.close();
+        
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            // Note: User needs to select "Save as PDF" in the print dialog
+          }, 500);
+        };
+      }
+    } else if (format === 'word') {
+      // For Word, create a downloadable HTML file that can be opened in Word
+      const blob = new Blob([documentContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Resolution_${resolution.resolutionNumber}.doc`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
+  };
+
   const printDocument = (resolution: Resolution) => {
     // Handle both string and ObjectId formats
     let templateId: string;
     if (typeof resolution.templateId === 'string') {
       templateId = resolution.templateId;
-    } else if (resolution.templateId && typeof resolution.templateId === 'object') {
+    } else if (resolution.templateId && typeof resolution.templateId === 'object' && resolution.templateId !== null) {
       templateId = (resolution.templateId as any)._id || (resolution.templateId as any).toString();
     } else {
-      templateId = '';
+      console.error('Invalid templateId:', resolution.templateId);
+      return;
     }
     
     const selectedTemplate = templates.find(t => t._id === templateId);
     if (!selectedTemplate) {
-      alert('No template assigned to this resolution');
+      console.error('Template not found:', templateId);
       return;
     }
     
     // Create a new window for printing
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
     if (printWindow) {
       const documentContent = generateDocumentHTML(resolution, selectedTemplate);
       printWindow.document.write(documentContent);
@@ -480,17 +541,25 @@ const AdminResolutions: React.FC = () => {
       printWindow.document.close();
       
       // Wait for content to load, then print
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 500);
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      };
     }
   };
 
   const generateDocumentHTML = (resolution: Resolution, template: ResolutionTemplate) => {
-    const present = (resolution as any).present || '';
-    const absent = (resolution as any).absent || '';
+    const present = (resolution as any).present || [];
+    const absent = (resolution as any).absent || [];
     const secondContent = (resolution as any).secondContent || '';
+    
+    const formatPresentAbsent = (members: Array<{name: string, position: string}>) => {
+      return members.map(member => 
+        `                      ${member.name}                     ${member.position}`
+      ).join('<br>');
+    };
     
     return `
       <!DOCTYPE html>
@@ -507,15 +576,48 @@ const AdminResolutions: React.FC = () => {
           }
           .header { text-align: center; margin-bottom: 30px; }
           .title-section { text-align: center; margin: 30px 0; }
-          .content-section { margin: 20px 0; }
-          .bordered-box { 
-            border: 1px solid #333; 
-            padding: 10px; 
-            min-height: 60px;
-            background-color: white;
+          .content-section { 
+            margin: 20px 0; 
+            page-break-inside: avoid;
           }
-          .signatories { margin-top: 40px; }
-          .signatory { margin: 15px 0; }
+          .content-text { 
+            padding: 10px 0; 
+            line-height: 1.6;
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+          }
+          .title-section {
+            margin: 20px 0;
+            text-align: center;
+            page-break-after: avoid;
+          }
+          .signatories {
+            margin-top: 40px;
+            page-break-inside: avoid;
+          }
+          .signatory {
+            margin: 15px 0;
+            page-break-inside: avoid;
+          }
+          .attested-by {
+            margin-top: 30px;
+            page-break-inside: avoid;
+          }
+          .attested-signatory {
+            margin: 10px 0;
+            page-break-inside: avoid;
+          }
+          /* Prevent page breaks before these elements */
+          .content-section:first-child,
+          .title-section,
+          .signatories,
+          .attested-by {
+            page-break-before: auto;
+          }
+          /* Allow page breaks between sections if needed */
+          .content-section + .content-section {
+            page-break-before: auto;
+          }
           @media print {
             body { margin: 0; }
             .no-print { display: none; }
@@ -534,32 +636,51 @@ const AdminResolutions: React.FC = () => {
           ).join('') || ''}
         </div>
 
-        <!-- Present and Absent at top -->
+        <!-- Resolution Content -->
         <div class="content-section">
-          <label>Present:</label>
-          <div class="bordered-box">${present.replace(/\n/g, '<br>')}</div>
-        </div>
-        <div class="content-section">
-          <label>Absent:</label>
-          <div class="bordered-box">${absent.replace(/\n/g, '<br>')}</div>
+          <div class="content-text">${resolution.content.replace(/\n/g, '<br>')}</div>
         </div>
 
-        <!-- First Main Content -->
+        <!-- Present and Absent Members -->
         <div class="content-section">
-          <label>Main Content:</label>
-          <div class="bordered-box">${resolution.content.replace(/\n/g, '<br>')}</div>
+          <!-- Present Members -->
+          ${present.length > 0 ? `
+            <div class="content-text" style="margin-bottom: 20px; color: #000000;">
+              <div style="font-weight: bold; margin-bottom: 10px; color: #000000;">Present:</div>
+${present.map((member: any, index: number) => 
+  `  <div style="margin-bottom: 2px; color: #000000;">
+    <span style="display: inline-block; width: 250px; color: #000000;">${member.name}</span>
+    <span style="font-weight: bold; color: #000000;">${member.position}</span>
+  </div>`
+).join('\n')}
+            </div>
+          ` : ''}
+
+          <!-- Absent Members -->
+          ${absent.length > 0 ? `
+            <div class="content-text" style="margin-bottom: 20px; color: #000000;">
+              <div style="font-weight: bold; margin-bottom: 10px; color: #000000;">Absent:</div>
+${absent.map((member: any, index: number) => 
+  `  <div style="margin-bottom: 2px; color: #000000;">
+    <span style="display: inline-block; width: 250px; color: #000000;">${member.name}</span>
+    <span style="font-weight: bold; color: #000000;">${member.position}</span>
+  </div>`
+).join('\n')}
+            </div>
+          ` : ''}
         </div>
 
-        <!-- Title Section -->
+        <!-- Resolution Number and Series - Below Absent, Above Second Content -->
         <div class="title-section">
           <h2 style="font-size: 20px; font-weight: bold;">RESOLUTION NO. ${resolution.resolutionNumber} SERIES OF ${resolution.series}</h2>
         </div>
 
-        <!-- Second Main Content -->
-        <div class="content-section">
-          <label>Second Main Content:</label>
-          <div class="bordered-box">${secondContent.replace(/\n/g, '<br>')}</div>
-        </div>
+        <!-- Second Content -->
+        ${secondContent ? `
+          <div class="content-section">
+            <div class="content-text" style="font-size: ${formData.secondContentFormat.fontSize}px; font-family: ${formData.secondContentFormat.fontFamily}; font-weight: ${formData.secondContentFormat.isBold ? 'bold' : 'normal'}; text-decoration: ${formData.secondContentFormat.isUnderline ? 'underline' : 'none'}; text-align: ${formData.secondContentFormat.alignment.toLowerCase()};">${secondContent.replace(/\n/g, '<br>')}</div>
+          </div>
+        ` : ''}
 
         <!-- Signatories -->
         <div class="signatories">
@@ -569,6 +690,7 @@ const AdminResolutions: React.FC = () => {
                 ${signatory.name}
               </div>
               <div style="font-size: 14px;">${signatory.position}</div>
+              ${(signatory as any).optionalText ? `<div style="font-size: 12px; margin-top: 2px;">${(signatory as any).optionalText}</div>` : ''}
             </div>
           `).join('') || ''}
         </div>
@@ -576,7 +698,7 @@ const AdminResolutions: React.FC = () => {
         <!-- Attested By -->
         ${(resolution as any).attestedBy && (resolution as any).attestedBy.length > 0 ? `
           <div style="margin-top: 30px;">
-            <div style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 20px;">ATTESTED BY:</div>
+            <div style="text-align: left; font-weight: bold; font-size: 14px; margin-bottom: 20px;">ATTESTED BY:</div>
             <div class="attested-by">
               ${(resolution as any).attestedBy.map((attested: any) => `
                 <div class="attested-signatory" style="text-align: ${attested.alignment || 'left'}; font-size: ${attested.fontSize || 14}px; font-family: ${attested.fontFamily || 'Arial'};">
@@ -584,6 +706,7 @@ const AdminResolutions: React.FC = () => {
                     ${attested.name}
                   </div>
                   <div style="font-size: 14px;">${attested.position}</div>
+                  ${attested.optionalText ? `<div style="font-size: 12px; margin-top: 2px;">${attested.optionalText}</div>` : ''}
                 </div>
               `).join('')}
             </div>
@@ -605,6 +728,7 @@ const AdminResolutions: React.FC = () => {
     const newSignatory = {
       name: '',
       position: '',
+      optionalText: '',
       alignment: 'Left' as const,
       isBold: false,
       isUnderline: true,
@@ -614,6 +738,48 @@ const AdminResolutions: React.FC = () => {
     setFormData({
       ...formData,
       signatories: [...formData.signatories, newSignatory]
+    });
+  };
+
+  const addPresentMember = () => {
+    const newMember = { name: '', position: '' };
+    setFormData({
+      ...formData,
+      present: [...formData.present, newMember]
+    });
+  };
+
+  const addAbsentMember = () => {
+    const newMember = { name: '', position: '' };
+    setFormData({
+      ...formData,
+      absent: [...formData.absent, newMember]
+    });
+  };
+
+  const updatePresentMember = (index: number, field: string, value: string) => {
+    const newPresent = [...formData.present];
+    newPresent[index] = { ...newPresent[index], [field]: value };
+    setFormData({ ...formData, present: newPresent });
+  };
+
+  const updateAbsentMember = (index: number, field: string, value: string) => {
+    const newAbsent = [...formData.absent];
+    newAbsent[index] = { ...newAbsent[index], [field]: value };
+    setFormData({ ...formData, absent: newAbsent });
+  };
+
+  const removePresentMember = (index: number) => {
+    setFormData({
+      ...formData,
+      present: formData.present.filter((_, i) => i !== index)
+    });
+  };
+
+  const removeAbsentMember = (index: number) => {
+    setFormData({
+      ...formData,
+      absent: formData.absent.filter((_, i) => i !== index)
     });
   };
 
@@ -713,37 +879,8 @@ const AdminResolutions: React.FC = () => {
           </div>
         ))}
 
-        {/* PRESENT AND ABSENT AT TOP */}
-        <div className="mb-6" style={{ backgroundColor: '#ffffff' }}>
-          <div className="mb-4">
-            <div 
-              style={{
-                fontSize: `${formData.presentFormat.fontSize}px`,
-                fontFamily: formData.presentFormat.fontFamily,
-                fontWeight: formData.presentFormat.isBold ? 'bold' : 'normal',
-                textDecoration: formData.presentFormat.isUnderline ? 'underline' : 'none',
-                textAlign: formData.presentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
-                backgroundColor: '#ffffff'
-              }}
-            >
-              <strong>Present:</strong> {formData.present || 'Present members will be listed here'}
-            </div>
-          </div>
-          <div className="mb-4">
-            <div 
-              style={{
-                fontSize: `${formData.absentFormat.fontSize}px`,
-                fontFamily: formData.absentFormat.fontFamily,
-                fontWeight: formData.absentFormat.isBold ? 'bold' : 'normal',
-                textDecoration: formData.absentFormat.isUnderline ? 'underline' : 'none',
-                textAlign: formData.absentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
-                backgroundColor: '#ffffff'
-              }}
-            >
-              <strong>Absent:</strong> {formData.absent || 'Absent members will be listed here'}
-            </div>
-          </div>
-        </div>
+        {/* TITLE CONTENT - RESOLUTION NUMBER AND SERIES TOGETHER */}
+        {/* Removed top title as requested */}
 
         {/* 1ST MAIN CONTENT */}
         <div className="mb-6">
@@ -754,14 +891,90 @@ const AdminResolutions: React.FC = () => {
               fontWeight: formData.contentFormat.isBold ? 'bold' : 'normal',
               textDecoration: formData.contentFormat.isUnderline ? 'underline' : 'none',
               textAlign: formData.contentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
-              backgroundColor: '#ffffff'
+              backgroundColor: '#ffffff',
+              color: '#000000'
             }}
           >
-            {formData.content || 'Main content will be displayed here'}
+            {formData.content.replace(/\n/g, '<br>')}
           </div>
         </div>
+        {formData.present.length > 0 && (
+          <div className="mb-6" style={{ backgroundColor: '#ffffff' }}>
+            <div className="mb-4">
+              <div 
+                style={{
+                  fontSize: `${formData.presentFormat.fontSize}px`,
+                  fontFamily: formData.presentFormat.fontFamily,
+                  fontWeight: formData.presentFormat.isBold ? 'bold' : 'normal',
+                  textDecoration: formData.presentFormat.isUnderline ? 'underline' : 'none',
+                  textAlign: formData.presentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                  backgroundColor: '#ffffff',
+                  color: '#000000'
+                }}
+              >
+                <strong style={{ color: '#000000' }}>Present:</strong>
+              </div>
+              <div 
+                style={{
+                  fontSize: `${formData.presentFormat.fontSize}px`,
+                  fontFamily: formData.presentFormat.fontFamily,
+                  fontWeight: formData.presentFormat.isBold ? 'bold' : 'normal',
+                  textDecoration: formData.presentFormat.isUnderline ? 'underline' : 'none',
+                  textAlign: formData.presentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                  backgroundColor: '#ffffff',
+                  color: '#000000'
+                }}
+              >
+                {formData.present.map((member, index) => (
+                  <div key={index} style={{ marginBottom: '2px', color: '#000000' }}>
+                    <span style={{ display: 'inline-block', width: '250px', color: '#000000' }}>{member.name}</span>
+                    <span style={{ fontWeight: 'bold', color: '#000000' }}>{member.position}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         
-        {/* TITLE CONTENT - RESOLUTION NUMBER AND SERIES TOGETHER */}
+        {formData.absent.length > 0 && (
+          <div className="mb-6" style={{ backgroundColor: '#ffffff' }}>
+            <div className="mb-4">
+              <div 
+                style={{
+                  fontSize: `${formData.absentFormat.fontSize}px`,
+                  fontFamily: formData.absentFormat.fontFamily,
+                  fontWeight: formData.absentFormat.isBold ? 'bold' : 'normal',
+                  textDecoration: formData.absentFormat.isUnderline ? 'underline' : 'none',
+                  textAlign: formData.absentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                  backgroundColor: '#ffffff',
+                  color: '#000000'
+                }}
+              >
+                <strong style={{ color: '#000000' }}>Absent:</strong>
+              </div>
+              <div 
+                style={{
+                  fontSize: `${formData.absentFormat.fontSize}px`,
+                  fontFamily: formData.absentFormat.fontFamily,
+                  fontWeight: formData.absentFormat.isBold ? 'bold' : 'normal',
+                  textDecoration: formData.absentFormat.isUnderline ? 'underline' : 'none',
+                  textAlign: formData.absentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                  backgroundColor: '#ffffff',
+                  color: '#000000'
+                }}
+              >
+                {formData.absent.map((member, index) => (
+                  <div key={index} style={{ marginBottom: '2px', color: '#000000' }}>
+                    <span style={{ display: 'inline-block', width: '250px', color: '#000000' }}>{member.name}</span>
+                    <span style={{ fontWeight: 'bold', color: '#000000' }}>{member.position}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RESOLUTION NUMBER AND SERIES - BELOW ABSENT, ABOVE SECOND CONTENT */}
         <div className="text-center my-6" style={{ backgroundColor: '#ffffff' }}>
           <h2 
             style={{
@@ -769,7 +982,8 @@ const AdminResolutions: React.FC = () => {
               fontFamily: formData.resolutionNumberFormat.fontFamily,
               fontWeight: formData.resolutionNumberFormat.isBold ? 'bold' : 'normal',
               textDecoration: formData.resolutionNumberFormat.isUnderline ? 'underline' : 'none',
-              backgroundColor: '#ffffff'
+              backgroundColor: '#ffffff',
+              color: '#000000'
             }}
           >
             RESOLUTION NO. {formData.resolutionNumber} SERIES OF {formData.series}
@@ -777,20 +991,25 @@ const AdminResolutions: React.FC = () => {
         </div>
 
         {/* 2ND MAIN CONTENT */}
-        <div className="mb-6">
-          <div 
-            style={{
-              fontSize: `${formData.secondContentFormat.fontSize}px`,
-              fontFamily: formData.secondContentFormat.fontFamily,
-              fontWeight: formData.secondContentFormat.isBold ? 'bold' : 'normal',
-              textDecoration: formData.secondContentFormat.isUnderline ? 'underline' : 'none',
-              textAlign: formData.secondContentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
-              backgroundColor: '#ffffff'
-            }}
-          >
-            {formData.secondContent || 'Second main content will be displayed here'}
+        {formData.secondContent && (
+          <div className="mb-6">
+            <div 
+              style={{
+                fontSize: `${formData.secondContentFormat.fontSize}px`,
+                fontFamily: formData.secondContentFormat.fontFamily,
+                fontWeight: formData.secondContentFormat.isBold ? 'bold' : 'normal',
+                textDecoration: formData.secondContentFormat.isUnderline ? 'underline' : 'none',
+                textAlign: formData.secondContentFormat.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                backgroundColor: '#ffffff'
+              }}
+            >
+              {formData.secondContent.replace(/\n/g, '<br>')}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* TITLE CONTENT - RESOLUTION NUMBER AND SERIES TOGETHER */}
+        {/* Removed top title as requested */}
         
         {/* SIGNATORIES - OPTIONAL TO ADD IF THERE IS NEEDED TO ADD IT WILL BE TOP OF THE SIGNATORIES FROM TEMPLATE */}
         {formData.signatories.length > 0 && (
@@ -815,6 +1034,50 @@ const AdminResolutions: React.FC = () => {
                   {signatory.name}
                 </div>
                 <div className="text-sm">{signatory.position}</div>
+                {signatory.optionalText && (
+                  <div className="text-xs mt-1" style={{ opacity: 0.8 }}>{signatory.optionalText}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* ATTESTED BY - AFTER SIGNATORIES */}
+        {formData.attestedBy.length > 0 && (
+          <div className="mt-8" style={{ backgroundColor: '#ffffff' }}>
+            <div 
+              style={{
+                textAlign: 'left',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                marginBottom: '20px',
+                color: '#000000',
+                backgroundColor: '#ffffff'
+              }}
+            >
+              ATTESTED BY:
+            </div>
+            {formData.attestedBy.map((attested, index) => (
+              <div 
+                key={index}
+                className="mb-4"
+                style={{ 
+                  textAlign: (attested.alignment || formData.attestedByFormat.alignment).toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                  fontSize: `${attested.fontSize || formData.attestedByFormat.fontSize}px`,
+                  fontFamily: attested.fontFamily || formData.attestedByFormat.fontFamily,
+                  fontWeight: attested.isBold || formData.attestedByFormat.isBold ? 'bold' : 'normal',
+                  textDecoration: attested.isUnderline || formData.attestedByFormat.isUnderline ? 'underline' : 'none',
+                  backgroundColor: '#ffffff',
+                  color: '#000000'
+                }}
+              >
+                <div style={{ fontWeight: attested.isBold || formData.attestedByFormat.isBold ? 'bold' : 'normal', textDecoration: attested.isUnderline || formData.attestedByFormat.isUnderline ? 'underline' : 'none' }}>
+                  {attested.name}
+                </div>
+                <div style={{ fontSize: '14px', color: '#000000' }}>{attested.position}</div>
+                {attested.optionalText && (
+                  <div style={{ fontSize: '12px', marginTop: '2px', color: '#000000' }}>{attested.optionalText}</div>
+                )}
               </div>
             ))}
           </div>
@@ -845,15 +1108,15 @@ const AdminResolutions: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gray-900 rounded-xl shadow-xl p-4 sm:p-6 border border-gray-800">
+      <div className="bg-white rounded-xl shadow-xl p-4 sm:p-6 border border-gray-300">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Manage Resolutions</h1>
-            <p className="text-gray-300 text-sm sm:text-base">Create and manage municipal resolutions</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Manage Resolutions</h1>
+            <p className="text-gray-800 text-sm sm:text-base">Create and manage municipal resolutions</p>
           </div>
           <button
             onClick={() => openModal()}
-            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
+            className="bg-yellow-600 text-gray-800 px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
           >
             Add New Resolution
           </button>
@@ -867,7 +1130,7 @@ const AdminResolutions: React.FC = () => {
       )}
 
       {/* Resolutions Table */}
-      <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-xl border border-gray-300 overflow-hidden">
         {/* Mobile Card View */}
         <div className="lg:hidden">
           {resolutions.map((resolution) => (
@@ -875,7 +1138,7 @@ const AdminResolutions: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-white">{resolution.resolutionNumber}</h3>
+                    <h3 className="font-semibold text-gray-800">{resolution.resolutionNumber}</h3>
                     <p className="text-sm text-gray-400">{resolution.series}</p>
                   </div>
                   <div className="flex flex-col items-end space-y-2">
@@ -884,44 +1147,63 @@ const AdminResolutions: React.FC = () => {
                         ? 'bg-green-900 text-green-200' 
                         : resolution.status === 'Pending'
                         ? 'bg-yellow-900 text-yellow-200'
-                        : 'bg-gray-700 text-gray-300'
+                        : 'bg-gray-700 text-gray-800'
                     }`}>
                       {resolution.status}
                     </span>
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       resolution.isPublic 
                         ? 'bg-blue-900 text-blue-200' 
-                        : 'bg-gray-700 text-gray-300'
+                        : 'bg-gray-700 text-gray-800'
                     }`}>
                       {resolution.isPublic ? 'Public' : 'Private'}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-300 line-clamp-2">{resolution.title}</p>
+                  <p className="text-sm text-gray-800 line-clamp-2">{resolution.title}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => openModal(resolution)}
-                    className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                    className="px-3 py-1 bg-blue-600 text-gray-800 rounded text-xs hover:bg-blue-700"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => viewDocument(resolution)}
-                    className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                    className="px-3 py-1 bg-green-600 text-gray-800 rounded text-xs hover:bg-green-700"
                   >
                     View
                   </button>
+                  <div className="relative group">
+                    <button className="px-3 py-1 bg-purple-600 text-gray-800 rounded text-xs hover:bg-purple-700">
+                      Download
+                    </button>
+                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                      <button
+                        onClick={() => downloadDocument(resolution, 'pdf')}
+                        className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
+                      >
+                        📄 Download PDF
+                      </button>
+                      <button
+                        onClick={() => downloadDocument(resolution, 'word')}
+                        className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
+                      >
+                        📝 Download Word
+                      </button>
+                    </div>
+                  </div>
                   <button
                     onClick={() => printDocument(resolution)}
-                    className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700"
+                    className="px-3 py-1 bg-orange-600 text-gray-800 rounded text-xs hover:bg-orange-700"
                   >
                     Print
                   </button>
                   <button
                     onClick={() => handleDelete(resolution._id)}
-                    className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                    className="px-3 py-1 bg-red-600 text-gray-800 rounded text-xs hover:bg-red-700"
                   >
                     Delete
                   </button>
@@ -934,34 +1216,34 @@ const AdminResolutions: React.FC = () => {
         {/* Desktop Table View */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-800">
+            <thead className="bg-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
                   Resolution Number
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
                   Title
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
                   Public
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
               {resolutions.map((resolution) => (
-                <tr key={resolution._id} className="hover:bg-gray-800 transition-colors">
+                <tr key={resolution._id} className="hover:bg-gray-200 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-white">{resolution.resolutionNumber}</div>
+                    <div className="text-sm font-medium text-gray-800">{resolution.resolutionNumber}</div>
                     <div className="text-sm text-gray-400">{resolution.series}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-white max-w-xs truncate">{resolution.title}</div>
+                    <div className="text-sm text-gray-800 max-w-xs truncate">{resolution.title}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs rounded-full ${
@@ -969,7 +1251,7 @@ const AdminResolutions: React.FC = () => {
                         ? 'bg-green-900 text-green-200' 
                         : resolution.status === 'Pending'
                         ? 'bg-yellow-900 text-yellow-200'
-                        : 'bg-gray-700 text-gray-300'
+                        : 'bg-gray-700 text-gray-800'
                     }`}>
                       {resolution.status}
                     </span>
@@ -978,46 +1260,74 @@ const AdminResolutions: React.FC = () => {
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       resolution.isPublic 
                         ? 'bg-blue-900 text-blue-200' 
-                        : 'bg-gray-700 text-gray-300'
+                        : 'bg-gray-700 text-gray-800'
                     }`}>
                       {resolution.isPublic ? 'Yes' : 'No'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => openModal(resolution)}
-                      className="text-yellow-400 hover:text-yellow-300 font-medium mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => viewDocument(resolution)}
-                      className="text-green-400 hover:text-green-300 font-medium mr-3"
-                    >
-                      View Document
-                    </button>
-                    <button
-                      onClick={() => printDocument(resolution)}
-                      className="text-blue-400 hover:text-blue-300 font-medium mr-3"
-                    >
-                      Print
-                    </button>
-                    {resolution.scannedCopy && (
-                      <a
-                        href={getImageUrl(resolution.scannedCopy)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-400 hover:text-purple-300 font-medium mr-3"
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openModal(resolution)}
+                        className="text-blue-400 hover:text-blue-300 font-medium"
                       >
-                        View PDF
-                      </a>
-                    )}
-                    <button
-                      onClick={() => handleDelete(resolution._id)}
-                      className="text-red-400 hover:text-red-300 font-medium"
-                    >
-                      Delete
-                    </button>
+                        Edit
+                      </button>
+                      <span className="text-gray-400">|</span>
+                      <button
+                        onClick={() => viewDocument(resolution)}
+                        className="text-green-400 hover:text-green-300 font-medium"
+                      >
+                        View
+                      </button>
+                      <span className="text-gray-400">|</span>
+                      <div className="relative group">
+                        <button className="text-purple-400 hover:text-purple-300 font-medium">
+                          Download
+                        </button>
+                        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                          <button
+                            onClick={() => downloadDocument(resolution, 'pdf')}
+                            className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
+                          >
+                            📄 Download PDF
+                          </button>
+                          <button
+                            onClick={() => downloadDocument(resolution, 'word')}
+                            className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
+                          >
+                            📝 Download Word
+                          </button>
+                        </div>
+                      </div>
+                      <span className="text-gray-400">|</span>
+                      <button
+                        onClick={() => printDocument(resolution)}
+                        className="text-orange-400 hover:text-orange-300 font-medium"
+                      >
+                        Print
+                      </button>
+                      {resolution.scannedCopy && (
+                        <>
+                          <span className="text-gray-400">|</span>
+                          <a
+                            href={`http://localhost:5000/${resolution.scannedCopy}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-400 hover:text-indigo-300 font-medium"
+                          >
+                            Scanned
+                          </a>
+                        </>
+                      )}
+                      <span className="text-gray-400">|</span>
+                      <button
+                        onClick={() => handleDelete(resolution._id)}
+                        className="text-red-400 hover:text-red-300 font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1027,23 +1337,23 @@ const AdminResolutions: React.FC = () => {
       </div>
 
       {resolutions.length === 0 && (
-        <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 p-12 text-center">
+        <div className="bg-white rounded-xl shadow-xl border border-gray-300 p-12 text-center">
           <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">No resolutions yet</h3>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No resolutions yet</h3>
           <p className="text-gray-400">Create your first resolution to get started</p>
         </div>
       )}
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 rounded-xl shadow-2xl p-6 w-full max-w-7xl mx-4 border border-gray-700 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-white mb-4">
-              {editingResolution ? 'Edit Resolution' : 'Add New Resolution'}
+              {editingResolution ? 'Edit Resolution' : 'Create New Resolution'}
             </h3>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1091,14 +1401,14 @@ const AdminResolutions: React.FC = () => {
                     
                     {/* Resolution Number Box */}
                     <div className="mb-4 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                      <label className="block text-sm font-medium text-gray-300 mb-2">RESOLUTION NO.</label>
+                      <label className="block text-sm font-medium text-white mb-2">RESOLUTION NO.</label>
                       <div className="flex gap-2 items-center">
                         <input
                           type="text"
                           required
                           value={formData.resolutionNumber}
                           onChange={(e) => setFormData({...formData, resolutionNumber: e.target.value})}
-                          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                           placeholder="Enter resolution number..."
                         />
                         <div className="flex gap-1">
@@ -1106,7 +1416,7 @@ const AdminResolutions: React.FC = () => {
                             type="number"
                             value={formData.resolutionNumberFormat.fontSize}
                             onChange={(e) => setFormData({...formData, resolutionNumberFormat: {...formData.resolutionNumberFormat, fontSize: parseInt(e.target.value) || 12}})}
-                            className="w-16 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                            className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
                             placeholder="Size"
                           />
                           <button
@@ -1129,14 +1439,14 @@ const AdminResolutions: React.FC = () => {
 
                     {/* Series Box */}
                     <div className="mb-4 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Series</label>
+                      <label className="block text-sm font-medium text-white mb-2">Series</label>
                       <div className="flex gap-2 items-center">
                         <input
                           type="text"
                           required
                           value={formData.series}
                           onChange={(e) => setFormData({...formData, series: e.target.value})}
-                          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                           placeholder="Enter series..."
                         />
                       </div>
@@ -1145,81 +1455,95 @@ const AdminResolutions: React.FC = () => {
 
                   {/* Present Box */}
                   <div className="mb-6 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Present</label>
-                    <div className="flex gap-2">
-                      <textarea
-                        rows={4}
-                        value={formData.present}
-                        onChange={(e) => setFormData({...formData, present: e.target.value})}
-                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        placeholder="Enter present members..."
-                      />
-                      <div className="flex flex-col gap-1">
-                        <input
-                          type="number"
-                          value={formData.presentFormat.fontSize}
-                          onChange={(e) => setFormData({...formData, presentFormat: {...formData.presentFormat, fontSize: parseInt(e.target.value) || 12}})}
-                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm"
-                          placeholder="Size"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFormData({...formData, presentFormat: {...formData.presentFormat, isBold: !formData.presentFormat.isBold}})}
-                          className={`px-2 py-1 rounded text-sm ${formData.presentFormat.isBold ? 'bg-yellow-600' : 'bg-gray-600'} text-white font-bold`}
-                        >
-                          B
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData({...formData, presentFormat: {...formData.presentFormat, isUnderline: !formData.presentFormat.isUnderline}})}
-                          className={`px-2 py-1 rounded text-sm ${formData.presentFormat.isUnderline ? 'bg-yellow-600' : 'bg-gray-600'} text-white underline`}
-                        >
-                          U
-                        </button>
-                      </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-white">Present</label>
+                      <button
+                        type="button"
+                        onClick={addPresentMember}
+                        className="px-3 py-1 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
+                      >
+                        Add Member
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {formData.present.map((member, index) => (
+                        <div key={index} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={member.name}
+                            onChange={(e) => updatePresentMember(index, 'name', e.target.value)}
+                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            placeholder="Name"
+                          />
+                          <input
+                            type="text"
+                            value={member.position}
+                            onChange={(e) => updatePresentMember(index, 'position', e.target.value)}
+                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            placeholder="Position"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removePresentMember(index)}
+                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      {formData.present.length === 0 && (
+                        <div className="text-gray-400 text-center py-4">No present members added</div>
+                      )}
                     </div>
                   </div>
 
                   {/* Absent Box */}
                   <div className="mb-6 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Absent</label>
-                    <div className="flex gap-2">
-                      <textarea
-                        rows={4}
-                        value={formData.absent}
-                        onChange={(e) => setFormData({...formData, absent: e.target.value})}
-                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        placeholder="Enter absent members..."
-                      />
-                      <div className="flex flex-col gap-1">
-                        <input
-                          type="number"
-                          value={formData.absentFormat.fontSize}
-                          onChange={(e) => setFormData({...formData, absentFormat: {...formData.absentFormat, fontSize: parseInt(e.target.value) || 12}})}
-                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm"
-                          placeholder="Size"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFormData({...formData, absentFormat: {...formData.absentFormat, isBold: !formData.absentFormat.isBold}})}
-                          className={`px-2 py-1 rounded text-sm ${formData.absentFormat.isBold ? 'bg-yellow-600' : 'bg-gray-600'} text-white font-bold`}
-                        >
-                          B
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData({...formData, absentFormat: {...formData.absentFormat, isUnderline: !formData.absentFormat.isUnderline}})}
-                          className={`px-2 py-1 rounded text-sm ${formData.absentFormat.isUnderline ? 'bg-yellow-600' : 'bg-gray-600'} text-white underline`}
-                        >
-                          U
-                        </button>
-                      </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-white">Absent</label>
+                      <button
+                        type="button"
+                        onClick={addAbsentMember}
+                        className="px-3 py-1 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
+                      >
+                        Add Member
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {formData.absent.map((member, index) => (
+                        <div key={index} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={member.name}
+                            onChange={(e) => updateAbsentMember(index, 'name', e.target.value)}
+                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            placeholder="Name"
+                          />
+                          <input
+                            type="text"
+                            value={member.position}
+                            onChange={(e) => updateAbsentMember(index, 'position', e.target.value)}
+                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            placeholder="Position"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeAbsentMember(index)}
+                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      {formData.absent.length === 0 && (
+                        <div className="text-gray-400 text-center py-4">No absent members added</div>
+                      )}
                     </div>
                   </div>
 
                   {/* Main Content Box */}
                   <div className="mb-6 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Main Content</label>
+                    <label className="block text-sm font-medium text-white mb-2">Main Content</label>
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <div className="mb-2 flex gap-2">
@@ -1250,7 +1574,7 @@ const AdminResolutions: React.FC = () => {
                           rows={8}
                           value={formData.content}
                           onChange={(e) => setFormData({...formData, content: e.target.value})}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                           placeholder="Enter resolution content..."
                         />
                       </div>
@@ -1259,9 +1583,20 @@ const AdminResolutions: React.FC = () => {
                           type="number"
                           value={formData.contentFormat.fontSize}
                           onChange={(e) => setFormData({...formData, contentFormat: {...formData.contentFormat, fontSize: parseInt(e.target.value) || 12}})}
-                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
                           placeholder="Size"
                         />
+                        <select
+                          value={formData.contentFormat.fontFamily || 'Arial'}
+                          onChange={(e) => setFormData({...formData, contentFormat: {...formData.contentFormat, fontFamily: e.target.value}})}
+                          className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        >
+                          <option value="Arial">Arial</option>
+                          <option value="Times New Roman">Times New Roman</option>
+                          <option value="Calibri">Calibri</option>
+                          <option value="Verdana">Verdana</option>
+                          <option value="Georgia">Georgia</option>
+                        </select>
                         <button
                           type="button"
                           onClick={() => setFormData({...formData, contentFormat: {...formData.contentFormat, isBold: !formData.contentFormat.isBold}})}
@@ -1282,7 +1617,7 @@ const AdminResolutions: React.FC = () => {
 
                   {/* Second Main Content Box */}
                   <div className="mb-6 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Second Main Content</label>
+                    <label className="block text-sm font-medium text-white mb-2">Second Main Content</label>
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <div className="mb-2 flex gap-2">
@@ -1312,7 +1647,7 @@ const AdminResolutions: React.FC = () => {
                           rows={8}
                           value={formData.secondContent}
                           onChange={(e) => setFormData({...formData, secondContent: e.target.value})}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                           placeholder="Enter second resolution content..."
                         />
                       </div>
@@ -1321,9 +1656,20 @@ const AdminResolutions: React.FC = () => {
                           type="number"
                           value={formData.secondContentFormat.fontSize}
                           onChange={(e) => setFormData({...formData, secondContentFormat: {...formData.secondContentFormat, fontSize: parseInt(e.target.value) || 12}})}
-                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
                           placeholder="Size"
                         />
+                        <select
+                          value={formData.secondContentFormat.fontFamily || 'Arial'}
+                          onChange={(e) => setFormData({...formData, secondContentFormat: {...formData.secondContentFormat, fontFamily: e.target.value}})}
+                          className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        >
+                          <option value="Arial">Arial</option>
+                          <option value="Times New Roman">Times New Roman</option>
+                          <option value="Calibri">Calibri</option>
+                          <option value="Verdana">Verdana</option>
+                          <option value="Georgia">Georgia</option>
+                        </select>
                         <button
                           type="button"
                           onClick={() => setFormData({...formData, secondContentFormat: {...formData.secondContentFormat, isBold: !formData.secondContentFormat.isBold}})}
@@ -1367,7 +1713,7 @@ const AdminResolutions: React.FC = () => {
                           type="checkbox"
                           checked={formData.isPublic}
                           onChange={(e) => setFormData({...formData, isPublic: e.target.checked})}
-                          className="w-4 h-4 text-yellow-600 bg-gray-800 border-gray-600 rounded focus:ring-yellow-500"
+                          className="w-4 h-4 text-yellow-600 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500"
                         />
                         <span className="ml-2 text-white">Make public</span>
                       </div>
@@ -1381,7 +1727,7 @@ const AdminResolutions: React.FC = () => {
                   <button
                     type="button"
                     onClick={addSignatory}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                    className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700"
                   >
                     Add Signatory
                   </button>
@@ -1389,12 +1735,12 @@ const AdminResolutions: React.FC = () => {
                 
                 {/* Global Signatories Formatting Controls */}
                 <div className="mb-4 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                  <h5 className="text-sm font-medium text-gray-300 mb-2">Default Signatories Formatting</h5>
+                  <h5 className="text-sm font-medium text-white mb-2">Default Signatories Formatting</h5>
                   <div className="flex gap-2 items-center flex-wrap">
                     <select
                       value={formData.signatoriesFormat.alignment}
                       onChange={(e) => setFormData({...formData, signatoriesFormat: {...formData.signatoriesFormat, alignment: e.target.value as any}})}
-                      className="px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                      className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
                     >
                       <option value="Left">Left</option>
                       <option value="Center">Center</option>
@@ -1404,16 +1750,16 @@ const AdminResolutions: React.FC = () => {
                     
                     <input
                       type="number"
-                      placeholder="Size"
                       value={formData.signatoriesFormat.fontSize}
                       onChange={(e) => setFormData({...formData, signatoriesFormat: {...formData.signatoriesFormat, fontSize: parseInt(e.target.value) || 12}})}
-                      className="w-16 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                      className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                      placeholder="Size"
                     />
                     
                     <select
                       value={formData.signatoriesFormat.fontFamily}
                       onChange={(e) => setFormData({...formData, signatoriesFormat: {...formData.signatoriesFormat, fontFamily: e.target.value}})}
-                      className="px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                      className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
                     >
                       <option value="Arial">Arial</option>
                       <option value="Times New Roman">Times New Roman</option>
@@ -1440,7 +1786,7 @@ const AdminResolutions: React.FC = () => {
                 </div>
                 
                 {formData.signatories.map((signatory, index) => (
-                  <div key={index} className="bg-gray-800 rounded-lg p-4 mb-4">
+                  <div key={index} className="bg-gray-800 border border-gray-600 rounded-lg p-4 mb-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                       <div>
                         <label className="block text-sm font-medium text-white mb-1">Name</label>
@@ -1449,7 +1795,7 @@ const AdminResolutions: React.FC = () => {
                           placeholder="Enter name"
                           value={signatory.name}
                           onChange={(e) => updateSignatory(index, 'name', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
                           required
                         />
                       </div>
@@ -1460,17 +1806,28 @@ const AdminResolutions: React.FC = () => {
                           placeholder="Enter position"
                           value={signatory.position}
                           onChange={(e) => updateSignatory(index, 'position', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
                           required
                         />
                       </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-white mb-1">Optional Text (appears below position)</label>
+                      <input
+                        type="text"
+                        placeholder="Enter optional text (e.g., Committee Chair)"
+                        value={signatory.optionalText || ''}
+                        onChange={(e) => updateSignatory(index, 'optionalText', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                      />
                     </div>
                     
                     <div className="flex items-center gap-4 mb-3">
                       <select
                         value={signatory.alignment}
                         onChange={(e) => updateSignatory(index, 'alignment', e.target.value)}
-                        className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                        className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
                       >
                         <option value="Left">Left</option>
                         <option value="Center">Center</option>
@@ -1481,15 +1838,15 @@ const AdminResolutions: React.FC = () => {
                       <input
                         type="number"
                         placeholder="Size"
-                        value={signatory.fontSize || 14}
+                        value={signatory.fontSize}
                         onChange={(e) => updateSignatory(index, 'fontSize', parseInt(e.target.value) || 14)}
-                        className="w-16 px-2 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        className="w-16 px-2 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
                       />
                       
                       <select
                         value={signatory.fontFamily || 'Arial'}
                         onChange={(e) => updateSignatory(index, 'fontFamily', e.target.value)}
-                        className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
                       >
                         <option value="Arial">Arial</option>
                         <option value="Times New Roman">Times New Roman</option>
@@ -1532,7 +1889,7 @@ const AdminResolutions: React.FC = () => {
                 ))}
                 
                 {formData.signatories.length === 0 && (
-                  <div className="bg-gray-800 rounded-lg p-8 text-center">
+                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-8 text-center">
                     <p className="text-gray-400">No signatories added. Click "Add Signatory" to add one.</p>
                   </div>
                 )}
@@ -1545,7 +1902,7 @@ const AdminResolutions: React.FC = () => {
                   <button
                     type="button"
                     onClick={addAttestedBy}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                    className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700"
                   >
                     Add Attested By
                   </button>
@@ -1553,12 +1910,12 @@ const AdminResolutions: React.FC = () => {
                 
                 {/* Global Attested By Formatting Controls */}
                 <div className="mb-4 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
-                  <h5 className="text-sm font-medium text-gray-300 mb-2">Attested By Formatting</h5>
+                  <h5 className="text-sm font-medium text-white mb-2">Attested By Formatting</h5>
                   <div className="flex gap-2 items-center flex-wrap">
                     <select
                       value={formData.attestedByFormat.alignment}
                       onChange={(e) => setFormData({...formData, attestedByFormat: {...formData.attestedByFormat, alignment: e.target.value as any}})}
-                      className="px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                      className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
                     >
                       <option value="Left">Left</option>
                       <option value="Center">Center</option>
@@ -1570,7 +1927,7 @@ const AdminResolutions: React.FC = () => {
                       type="number"
                       value={formData.attestedByFormat.fontSize}
                       onChange={(e) => setFormData({...formData, attestedByFormat: {...formData.attestedByFormat, fontSize: parseInt(e.target.value) || 12}})}
-                      className="w-16 px-2 py-1 bg-gray-700 border border-gray-500 rounded text-white text-sm"
+                      className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
                       placeholder="Size"
                     />
                     <button
@@ -1595,25 +1952,35 @@ const AdminResolutions: React.FC = () => {
                   <div key={index} className="mb-4 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
+                        <label className="block text-sm font-medium text-white mb-1">Name</label>
                         <input
                           type="text"
                           value={attested.name}
                           onChange={(e) => updateAttestedBy(index, 'name', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white"
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
                           placeholder="Enter name..."
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Position</label>
+                        <label className="block text-sm font-medium text-white mb-1">Position</label>
                         <input
                           type="text"
                           value={attested.position}
                           onChange={(e) => updateAttestedBy(index, 'position', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded text-white"
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
                           placeholder="Enter position..."
                         />
                       </div>
+                    </div>
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-white mb-1">Optional Text (appears below position)</label>
+                      <input
+                        type="text"
+                        value={attested.optionalText || ''}
+                        onChange={(e) => updateAttestedBy(index, 'optionalText', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                        placeholder="Enter optional text (e.g., Committee Chair)"
+                      />
                     </div>
                     <div className="mt-3 flex gap-4 items-center">
                       <label className="flex items-center text-white">
@@ -1650,7 +2017,7 @@ const AdminResolutions: React.FC = () => {
                 ))}
                 
                 {formData.attestedBy.length === 0 && (
-                  <div className="bg-gray-800 rounded-lg p-8 text-center">
+                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-8 text-center">
                     <p className="text-gray-400">No attested by signatories added. Click "Add Attested By" to add one.</p>
                   </div>
                 )}
@@ -1674,7 +2041,7 @@ const AdminResolutions: React.FC = () => {
                     type="checkbox"
                     checked={formData.isPublic}
                     onChange={(e) => setFormData({...formData, isPublic: e.target.checked})}
-                    className="mr-2 w-4 h-4 bg-gray-800 border-gray-600 rounded focus:ring-yellow-500"
+                    className="mr-2 w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500"
                   />
                   <span className="text-sm text-white">Make public</span>
                 </label>
@@ -1684,7 +2051,7 @@ const AdminResolutions: React.FC = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
@@ -1700,9 +2067,9 @@ const AdminResolutions: React.FC = () => {
               </div>
 
               {/* Preview Section */}
-              <div className="bg-white rounded-lg p-6 overflow-y-auto max-h-[70vh]">
-                <h4 className="text-lg font-semibold text-gray-800 mb-4">Document Preview</h4>
-                <div className="border border-gray-300 rounded p-4 bg-white" style={{ minHeight: '600px', backgroundColor: '#ffffff' }}>
+              <div className="bg-gray-800 rounded-lg p-6 overflow-y-auto max-h-[70vh] border border-gray-600">
+                <h4 className="text-lg font-semibold text-white mb-4">Document Preview</h4>
+                <div className="border border-gray-600 rounded p-4 bg-white" style={{ minHeight: '600px', backgroundColor: '#ffffff' }}>
                   {renderPreview()}
                 </div>
               </div>

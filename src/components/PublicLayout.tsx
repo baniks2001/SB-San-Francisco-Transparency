@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
 import api, { apiWithRetry } from '../services/api';
 import { SystemSettings } from '../types';
+import GoogleMap from './GoogleMap';
 
 const PublicLayout: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -375,7 +376,7 @@ const PublicLayout: React.FC = () => {
       {/* Footer */}
       <footer className="bg-yellow-900 text-white">
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Quick Links */}
             <div>
               <h3 className="text-sm font-semibold mb-2">Quick Links</h3>
@@ -385,6 +386,7 @@ const PublicLayout: React.FC = () => {
                 <li><Link to="/ordinances" className="hover:text-yellow-200 text-xs">Ordinances</Link></li>
                 <li><Link to="/procurements" className="hover:text-yellow-200 text-xs">Procurements</Link></li>
                 <li><Link to="/vacancies" className="hover:text-yellow-200 text-xs">Vacancies</Link></li>
+                <li><Link to="/announcements" className="hover:text-yellow-200 text-xs">Announcements</Link></li>
               </ul>
             </div>
 
@@ -412,6 +414,28 @@ const PublicLayout: React.FC = () => {
                 <p className="text-xs">Saturday: {systemSettings?.officeHours?.saturday || '8:00 AM - 12:00 PM'}</p>
                 <p className="text-xs">Sunday: {systemSettings?.officeHours?.sunday || 'Closed'}</p>
               </div>
+            </div>
+
+            {/* Google Map */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Find Us</h3>
+              {systemSettings?.mapLocation ? (
+                <GoogleMap
+                  latitude={systemSettings.mapLocation.latitude}
+                  longitude={systemSettings.mapLocation.longitude}
+                  address={systemSettings.contactInfo?.address || systemSettings.mapLocation.address}
+                  height="200px"
+                  zoom={15}
+                />
+              ) : (
+                <div className="bg-gray-700 rounded p-4 text-center">
+                  <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p className="text-gray-400 text-xs">Map location not available</p>
+                </div>
+              )}
             </div>
           </div>
 

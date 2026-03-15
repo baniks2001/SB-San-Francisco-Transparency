@@ -10,22 +10,23 @@ export const getBaseUrl = (): string => {
 export const getApiBaseUrl = (): string => {
   const protocol = window.location.protocol;
   const hostname = window.location.hostname;
-  const port = window.location.port;
+  const currentPort = window.location.port;
   
-  // Check if we're running behind Nginx (same port)
-  // If the frontend and backend are on the same port, use /api
-  const currentPort = port || (protocol === 'https:' ? '443' : '80');
+  // API port configuration
+  const apiPort = process.env.REACT_APP_API_PORT || '5000';
   
-  // For development with separate ports
-  if (process.env.NODE_ENV === 'development' && 
-      (hostname === 'localhost' || hostname === '127.0.0.1') && 
-      currentPort !== '80' && currentPort !== '443') {
-    // Check if backend is running on port 5000 (traditional setup)
-    return `http://localhost:5000`;
+  // Handle different environments
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `http://localhost:${apiPort}`;
   }
   
-  // For Nginx setup or production - use same port with /api prefix
-  return `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+  // For port forwarded or network access
+  if (currentPort && currentPort !== '80' && currentPort !== '443') {
+    return `${protocol}//${hostname}:${apiPort}`;
+  }
+  
+  // Default for production
+  return `${protocol}//${hostname}:${apiPort}`;
 };
 
 export const getImageUrl = (imagePath: string): string => {
@@ -45,17 +46,9 @@ export const getImageUrl = (imagePath: string): string => {
     return imagePath;
   }
   
-  // For development with separate ports
-  if (process.env.NODE_ENV === 'development' && 
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-      window.location.port !== '80' && window.location.port !== '443') {
-    // Check if backend is running on port 5000 (traditional setup)
-    return `http://localhost:5000/uploads/${cleanPath}`;
-  }
-  
-  // For Nginx setup or production - use same port
-  const baseUrl = getBaseUrl();
-  return `${baseUrl}/uploads/${cleanPath}`;
+  // Relative path - construct full URL
+  const apiBaseUrl = getApiBaseUrl();
+  return `${apiBaseUrl}/uploads/${cleanPath}`;
 };
 
 export const getLogoUrl = (logoPath: string): string => {
@@ -72,17 +65,9 @@ export const getLogoUrl = (logoPath: string): string => {
     return logoPath;
   }
   
-  // For development with separate ports
-  if (process.env.NODE_ENV === 'development' && 
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-      window.location.port !== '80' && window.location.port !== '443') {
-    // Check if backend is running on port 5000 (traditional setup)
-    return `http://localhost:5000${logoPath}`;
-  }
-  
-  // For Nginx setup or production - use same port
-  const baseUrl = getBaseUrl();
-  return `${baseUrl}${logoPath}`;
+  // Relative path - construct full URL
+  const apiBaseUrl = getApiBaseUrl();
+  return `${apiBaseUrl}${logoPath}`;
 };
 
 // Utility to get current network information
