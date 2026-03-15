@@ -18,8 +18,8 @@ import systemRoutes from './routes/system';
 import settingsRoutes from './routes/settings';
 import templateRoutes from './routes/templates';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from parent directory
+dotenv.config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
