@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PublicLayout from './components/PublicLayout';
 import AdminLayout from './components/AdminLayout';
+import NetworkInfo from './components/NetworkInfo';
 import Home from './pages/Home';
 import Resolutions from './pages/Resolutions';
 import Ordinances from './pages/Ordinances';
@@ -21,6 +22,7 @@ import AdminAnnouncements from './pages/admin/Announcements';
 import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
 import AdminTemplates from './pages/admin/Templates';
+import AdminHomeContent from './pages/admin/HomeContent';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
@@ -55,6 +57,7 @@ function AppContent() {
           <Route index element={<AdminDashboard />} />
           <Route path="resolutions" element={<AdminResolutions />} />
           <Route path="ordinances" element={<AdminOrdinances />} />
+          <Route path="home-content" element={<AdminHomeContent />} />
           <Route path="templates" element={<AdminTemplates />} />
           <Route path="procurements" element={<AdminProcurements />} />
           <Route path="budgets" element={<AdminBudgets />} />
@@ -68,6 +71,9 @@ function AppContent() {
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      
+      {/* Network Info Component - Only in development */}
+      {process.env.NODE_ENV === 'development' && <NetworkInfo />}
     </Router>
   );
 }

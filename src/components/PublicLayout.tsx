@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
-import api from '../services/api';
+import api, { apiWithRetry } from '../services/api';
 import { SystemSettings } from '../types';
 
 const PublicLayout: React.FC = () => {
@@ -27,7 +27,7 @@ const PublicLayout: React.FC = () => {
   useEffect(() => {
     const fetchSystemSettings = async () => {
       try {
-        const response = await api.get('/settings');
+        const response = await apiWithRetry.get('/settings');
         setSystemSettings(response.data);
       } catch (error) {
         console.error('Failed to fetch system settings:', error);
@@ -76,11 +76,24 @@ const PublicLayout: React.FC = () => {
       {/* Top Navigation */}
       <header className="bg-gray-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Top Bar with Logos */}
           <div className="flex justify-between items-center h-16">
-            {/* Logo and System Name */}
+            {/* Logos and System Name */}
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                {systemSettings?.systemLogo ? (
+              <div className="flex items-center space-x-2">
+                {systemSettings?.systemLogos && systemSettings.systemLogos.length > 0 ? (
+                  systemSettings.systemLogos.slice(0, 3).map((logo, index) => (
+                    <img 
+                      key={index}
+                      className="h-6 w-6 sm:h-8 sm:w-8 object-contain" 
+                      src={getImageUrl(logo)}
+                      alt={`System Logo ${index + 1}`}
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iI0Y1OUUwQiIvPgo8cGF0aCBkPSJNOCAxNkgxNlY4SDhWMTZaTTE2IDE2SDI0VjhIMTZWMTZaTTggMjRIMTZWMTZIOFYyNFpNMTYgMjRIMjRWMTZIMTZWMjRaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
+                      }}
+                    />
+                  ))
+                ) : systemSettings?.systemLogo ? (
                   <img 
                     className="h-6 w-6 sm:h-8 sm:w-8" 
                     src={getImageUrl(systemSettings.systemLogo)}
@@ -92,7 +105,7 @@ const PublicLayout: React.FC = () => {
                 ) : (
                   <img 
                     className="h-6 w-6 sm:h-8 sm:w-8" 
-                    src="/logo.png" 
+                    src="/logo192.png" 
                     alt="System Logo"
                     onError={(e) => {
                       e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iI0Y1OUUwQiIvPgo8cGF0aCBkPSJNOCAxNkgxNlY4SDhWMTZaTTE2IDE2SDI0VjhIMTZWMTZaTTggMjRIMTZWMTZIOFYyNFpNMTYgMjRIMjRWMTZIMTZWMjRaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K';
@@ -101,190 +114,258 @@ const PublicLayout: React.FC = () => {
                 )}
               </div>
               <div className="ml-2 sm:ml-4 flex-1 min-w-0">
-                <h1 className="text-[6px] sm:text-[8px] md:text-xs lg:text-sm xl:text-base font-bold text-white whitespace-nowrap leading-tight overflow-hidden">
+                <h1 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-white whitespace-nowrap leading-tight overflow-hidden">
                   {systemSettings?.systemName || 'Sangguniang Bayan Transparency Portal'}
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-300 truncate whitespace-nowrap">{systemSettings?.location || 'San Francisco, Southern Leyte'}</p>
               </div>
             </div>
+          </div>
 
-            {/* Navigation Links */}
-            <nav className="hidden md:flex space-x-4 sm:space-x-6 lg:space-x-8">
-              <Link
-                to="/"
-                className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
-                  isActivePath('/') 
-                    ? 'text-yellow-400 border-b-2 border-yellow-400' 
-                    : 'text-gray-300 hover:text-yellow-400'
-                }`}
-              >
-                Home
-              </Link>
-              <Link
-                to="/resolutions"
-                className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
-                  isActivePath('/resolutions') 
-                    ? 'text-yellow-400 border-b-2 border-yellow-400' 
-                    : 'text-gray-300 hover:text-yellow-400'
-                }`}
-              >
-                Resolutions
-              </Link>
-              <Link
-                to="/ordinances"
-                className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
-                  isActivePath('/ordinances') 
-                    ? 'text-yellow-400 border-b-2 border-yellow-400' 
-                    : 'text-gray-300 hover:text-yellow-400'
-                }`}
-              >
-                Ordinances
-              </Link>
-              <Link
-                to="/procurements"
-                className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
-                  isActivePath('/procurements') 
-                    ? 'text-yellow-400 border-b-2 border-yellow-400' 
-                    : 'text-gray-300 hover:text-yellow-400'
-                }`}
-              >
-                Procurements & Budget
-              </Link>
-              <Link
-                to="/vacancies"
-                className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
-                  isActivePath('/vacancies') 
-                    ? 'text-yellow-400 border-b-2 border-yellow-400' 
-                    : 'text-gray-300 hover:text-yellow-400'
-                }`}
-              >
-                Vacancies
-              </Link>
-            </nav>
-
-            {/* Right side */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Current Date/Time */}
-              <div className="hidden sm:block text-xs sm:text-sm text-gray-300">
-                {formatTime(currentTime)}
-              </div>
-
-              {/* Login Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center text-xs sm:text-sm font-medium text-gray-300 hover:text-yellow-400 focus:outline-none"
-                >
-                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="ml-1 text-white hidden sm:inline">Login</span>
-                  <svg className="ml-1 h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 sm:w-80 bg-white rounded-md shadow-lg py-2 sm:py-4 z-50">
-                    <form onSubmit={handleLogin} className="px-2 sm:px-4">
-                      <div className="mb-2 sm:mb-3">
-                        <label className="block text-xs sm:text-sm font-medium text-white mb-1">Username</label>
-                        <input
-                          type="text"
-                          value={loginForm.username}
-                          onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
-                          className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-xs sm:text-sm"
-                          placeholder="Enter username"
-                          required
-                        />
-                      </div>
-                      <div className="mb-2 sm:mb-3">
-                        <label className="block text-xs sm:text-sm font-medium text-white mb-1">Password</label>
-                        <input
-                          type="password"
-                          value={loginForm.password}
-                          onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                          className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-xs sm:text-sm"
-                          placeholder="Enter password"
-                          required
-                        />
-                      </div>
-                      {error && (
-                        <div className="mb-2 sm:mb-3 text-xs sm:text-sm text-red-600">
-                          {error}
-                        </div>
-                      )}
-                      <button
-                        type="submit"
-                        disabled={isLoggingIn}
-                        className="w-full bg-yellow-600 text-white py-1 sm:py-2 px-2 sm:px-4 rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
-                      >
-                        {isLoggingIn ? 'Logging in...' : 'Login'}
-                      </button>
-                    </form>
+          {/* Navigation Menu Row */}
+          <div className="border-t border-gray-700 bg-gray-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <nav className="flex justify-between items-center py-3">
+                {/* Navigation Links */}
+                <div className="hidden md:flex space-x-4 sm:space-x-6 lg:space-x-8">
+                  <Link
+                    to="/"
+                    className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
+                      isActivePath('/') 
+                        ? 'text-yellow-400 border-b-2 border-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                  >
+                    Home
+                  </Link>
+                  <Link
+                    to="/resolutions"
+                    className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
+                      isActivePath('/resolutions') 
+                        ? 'text-yellow-400 border-b-2 border-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                  >
+                    Resolutions
+                  </Link>
+                  <Link
+                    to="/ordinances"
+                    className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
+                      isActivePath('/ordinances') 
+                        ? 'text-yellow-400 border-b-2 border-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                  >
+                    Ordinances
+                  </Link>
+                  <Link
+                    to="/procurements"
+                    className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
+                      isActivePath('/procurements') 
+                        ? 'text-yellow-400 border-b-2 border-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                  >
+                    Procurements & Budget
+                  </Link>
+                  <Link
+                    to="/vacancies"
+                    className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
+                      isActivePath('/vacancies') 
+                        ? 'text-yellow-400 border-b-2 border-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                  >
+                    Vacancies
+                  </Link>
+                </div>
+                
+                {/* Right side */}
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                  {/* Current Date/Time */}
+                  <div className="hidden sm:block text-xs sm:text-sm text-gray-300">
+                    {formatTime(currentTime)}
                   </div>
-                )}
-              </div>
+
+                  {/* Login Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="flex items-center text-xs sm:text-sm font-medium text-gray-300 hover:text-yellow-400 focus:outline-none"
+                    >
+                      <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="ml-1 text-white hidden sm:inline">Login</span>
+                      <svg className="ml-1 h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {isDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-64 sm:w-80 bg-white rounded-md shadow-lg py-2 sm:py-4 z-50">
+                        <form onSubmit={handleLogin} className="px-2 sm:px-4">
+                          <div className="mb-2 sm:mb-3">
+                            <label className="block text-xs sm:text-sm font-medium text-white mb-1">Username</label>
+                            <input
+                              type="text"
+                              value={loginForm.username}
+                              onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                              className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-xs sm:text-sm"
+                              placeholder="Enter username"
+                              required
+                            />
+                          </div>
+                          <div className="mb-2 sm:mb-3">
+                            <label className="block text-xs sm:text-sm font-medium text-white mb-1">Password</label>
+                            <input
+                              type="password"
+                              value={loginForm.password}
+                              onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                              className="w-full px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-xs sm:text-sm"
+                              placeholder="Enter password"
+                              required
+                            />
+                          </div>
+                          {error && (
+                            <div className="mb-2 sm:mb-3 text-xs sm:text-sm text-red-600">
+                              {error}
+                            </div>
+                          )}
+                          <button
+                            type="submit"
+                            disabled={isLoggingIn}
+                            className="w-full bg-yellow-600 text-white py-1 sm:py-2 px-2 sm:px-4 rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+                          >
+                            {isLoggingIn ? 'Logging in...' : 'Login'}
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </nav>
             </div>
           </div>
         </div>
-
-        {/* Mobile menu */}
-        <div className="md:hidden border-t border-gray-700 bg-gray-800">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link
-              to="/"
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActivePath('/') 
-                  ? 'text-yellow-400 bg-gray-700' 
-                  : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
-              }`}
-            >
-              Home
-            </Link>
-            <Link
-              to="/resolutions"
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActivePath('/resolutions') 
-                  ? 'text-yellow-400 bg-gray-700' 
-                  : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
-              }`}
-            >
-              Resolutions
-            </Link>
-            <Link
-              to="/ordinances"
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActivePath('/ordinances') 
-                  ? 'text-yellow-400 bg-gray-700' 
-                  : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
-              }`}
-            >
-              Ordinances
-            </Link>
-            <Link
-              to="/procurements"
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActivePath('/procurements') 
-                  ? 'text-yellow-400 bg-gray-700' 
-                  : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
-              }`}
-            >
-              Procurements & Budget
-            </Link>
-            <Link
-              to="/vacancies"
-              className={`block px-3 py-2 rounded-md text-base font-medium ${
-                isActivePath('/vacancies') 
-                  ? 'text-yellow-400 bg-gray-700' 
-                  : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
-              }`}
-            >
-              Vacancies
-            </Link>
-          </div>
-        </div>
       </header>
+
+      {/* Mobile menu */}
+      <div className="md:hidden border-t border-gray-700 bg-gray-800">
+        <div className="px-2 pt-2 pb-3 space-y-1">
+          <Link
+            to="/"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              isActivePath('/') 
+                ? 'text-yellow-400 bg-gray-700' 
+                : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
+            }`}
+          >
+            Home
+          </Link>
+          <Link
+            to="/resolutions"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              isActivePath('/resolutions') 
+                ? 'text-yellow-400 bg-gray-700' 
+                : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
+            }`}
+          >
+            Resolutions
+          </Link>
+          <Link
+            to="/ordinances"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              isActivePath('/ordinances') 
+                ? 'text-yellow-400 bg-gray-700' 
+                : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
+            }`}
+          >
+            Ordinances
+          </Link>
+          <Link
+            to="/procurements"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              isActivePath('/procurements') 
+                ? 'text-yellow-400 bg-gray-700' 
+                : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
+            }`}
+          >
+            Procurements & Budget
+          </Link>
+          <Link
+            to="/vacancies"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              isActivePath('/vacancies') 
+                ? 'text-yellow-400 bg-gray-700' 
+                : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
+            }`}
+          >
+            Vacancies
+          </Link>
+          
+          {/* Mobile Right Side - Date/Time and Login */}
+          <div className="flex justify-between items-center pt-2 border-t border-gray-700 mt-2">
+            <div className="text-xs text-gray-300">
+              {formatTime(currentTime)}
+            </div>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center text-xs font-medium text-gray-300 hover:text-yellow-400 focus:outline-none"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="ml-1 text-white">Login</span>
+              <svg className="ml-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Mobile Login Dropdown */}
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg py-4 z-50">
+              <form onSubmit={handleLogin} className="px-4">
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                  <input
+                    type="text"
+                    value={loginForm.username}
+                    onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input
+                    type="password"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+                {error && (
+                  <div className="mb-3 text-sm text-red-600">
+                    {error}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={isLoggingIn}
+                  className="w-full bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {isLoggingIn ? 'Logging in...' : 'Login'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="pb-4">

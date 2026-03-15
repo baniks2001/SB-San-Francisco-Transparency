@@ -22,7 +22,7 @@ import templateRoutes from './routes/templates';
 dotenv.config({ path: '../.env' });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.SERVER_PORT || 5000;
 
 // Middleware
 app.use(cors());
@@ -48,7 +48,13 @@ app.use('/api/templates', templateRoutes);
 
 // Database connection
 console.log('Attempting to connect to MongoDB...');
-mongoose.connect(process.env.MONGODB_URI || '')
+mongoose.connect(process.env.MONGODB_URI || '', {
+  serverSelectionTimeoutMS: 30000, // Keep trying to send operations for 30 seconds
+  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+  connectTimeoutMS: 30000, // Give up initial connection after 30 seconds
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+  minPoolSize: 2, // Maintain at least 2 socket connections
+})
   .then(() => {
     console.log('Connected to MongoDB Atlas');
     console.log(`Starting server on port ${PORT}...`);

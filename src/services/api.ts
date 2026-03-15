@@ -1,27 +1,31 @@
 import axios from 'axios';
+import { getApiBaseUrl as getDynamicApiUrl } from '../utils/networkUtils';
+
+// Retry utility function
+const retryRequest = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries > 0 && (error.code === 'ECONNABORTED' || error.code === 'NETWORK_ERROR')) {
+      console.log(`Retrying request... ${retries} attempts left`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return retryRequest(fn, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+};
 
 // Dynamic API URL detection
 const getApiBaseUrl = () => {
-  // Check if running in development mode
-  if (process.env.NODE_ENV === 'development') {
-    // Check if accessed from network (not localhost)
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:5000/api';
-    } else {
-      // Use the same hostname as the frontend for network access
-      return `http://${hostname}:5000/api`;
-    }
-  }
-  // Production fallback
-  return '/api';
+  // Use the dynamic IP detection utility
+  return getDynamicApiUrl();
 };
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || getApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // Request interceptor to add auth token
@@ -50,5 +54,21 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Wrapper methods with retry logic
+export const apiWithRetry = {
+  get: <T>(url: string, config?: any) => {
+    return retryRequest(() => api.get(url, config));
+  },
+  post: <T>(url: string, data?: any, config?: any) => {
+    return retryRequest(() => api.post(url, data, config));
+  },
+  put: <T>(url: string, data?: any, config?: any) => {
+    return retryRequest(() => api.put(url, data, config));
+  },
+  delete: <T>(url: string, config?: any) => {
+    return retryRequest(() => api.delete(url, config));
+  }
+};
 
 export default api;

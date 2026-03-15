@@ -16,6 +16,7 @@ const AdminLayout: React.FC = () => {
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: '📊' },
+    { name: 'Home Content', path: '/admin/home-content', icon: '🏠' },
     { name: 'Resolutions', path: '/admin/resolutions', icon: '📄' },
     { name: 'Ordinances', path: '/admin/ordinances', icon: '📋' },
     { name: 'Templates', path: '/admin/templates', icon: '📝' },

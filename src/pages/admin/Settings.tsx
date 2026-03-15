@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { SystemSettings } from '../../types';
+import { getImageUrl } from '../../utils/imageUtils';
 
 const AdminSettings: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -9,6 +10,7 @@ const AdminSettings: React.FC = () => {
   const [modalField, setModalField] = useState('');
   const [editValue, setEditValue] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   useEffect(() => {
     fetchSettings();
@@ -25,16 +27,21 @@ const AdminSettings: React.FC = () => {
     }
   };
 
-  const getImageUrl = (imagePath: string) => {
-    if (!imagePath) return '';
-    if (imagePath.startsWith('http')) return imagePath;
-    return `${api.defaults.baseURL}/uploads/${imagePath}`;
-  };
-
   const openModal = (field: string) => {
     setModalField(field);
     setEditValue(getFieldValue(field));
+    setSelectedFile(null);
+    setSelectedFiles([]);
     setIsModalOpen(true);
+  };
+
+  const deleteLogo = async (index: number) => {
+    try {
+      await api.delete(`/settings/logo/${index}`);
+      await fetchSettings();
+    } catch (error) {
+      console.error('Failed to delete logo:', error);
+    }
   };
 
   const getFieldValue = (field: string): string => {
@@ -74,6 +81,14 @@ const AdminSettings: React.FC = () => {
         const formData = new FormData();
         formData.append('file', selectedFile);
         await api.post('/settings/logo', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else if (modalField === 'systemLogos' && selectedFiles.length > 0) {
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+        await api.post('/settings/logos', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       } else {
@@ -177,26 +192,44 @@ const AdminSettings: React.FC = () => {
           </div>
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">System Logo</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">System Logos (Max 3)</label>
               <button
-                onClick={() => openModal('systemLogo')}
+                onClick={() => openModal('systemLogos')}
                 className="bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 transition-colors text-sm"
               >
-                Edit
+                Add Logos
               </button>
             </div>
             <div className="flex items-center space-x-4">
-              {settings?.systemLogo ? (
-                <img 
-                  src={getImageUrl(settings.systemLogo)}
-                  alt="System Logo"
-                  className="h-12 w-12 object-contain rounded"
-                />
+              {settings?.systemLogos && settings.systemLogos.length > 0 ? (
+                settings.systemLogos.map((logo, index) => (
+                  <div key={index} className="relative group">
+                    <img 
+                      src={getImageUrl(logo)}
+                      alt={`System Logo ${index + 1}`}
+                      className="h-12 w-12 object-contain rounded"
+                    />
+                    <button
+                      onClick={() => deleteLogo(index)}
+                      className="absolute -top-2 -right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="mt-1 text-center">
+                      <p className="text-gray-400 text-xs">{index + 1}</p>
+                    </div>
+                  </div>
+                ))
               ) : (
                 <div className="h-12 w-12 bg-gray-700 rounded flex items-center justify-center">
-                  <span className="text-gray-400 text-xs">No Logo</span>
+                  <span className="text-gray-400 text-xs">No Logos</span>
                 </div>
               )}
+            </div>
+            <div className="mt-2">
+              <p className="text-gray-400 text-xs">Upload up to 3 logos that will appear in the top navigation bar</p>
             </div>
           </div>
         </div>
@@ -379,6 +412,19 @@ const AdminSettings: React.FC = () => {
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-600 file:text-white hover:file:bg-yellow-700"
                     accept="image/*"
                   />
+                ) : modalField === 'systemLogos' ? (
+                  <div>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-600 file:text-white hover:file:bg-yellow-700"
+                      accept="image/*"
+                    />
+                    <p className="text-gray-400 text-xs mt-2">
+                      Select up to {3 - (settings?.systemLogos?.length || 0)} logo files (Max 3 total)
+                    </p>
+                  </div>
                 ) : modalField === 'aboutOffice' || modalField === 'mission' || modalField === 'vision' || modalField === 'keyResponsibilities' || modalField === 'copyright' ? (
                   <textarea
                     value={editValue}

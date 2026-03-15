@@ -16,6 +16,7 @@ router.get('/', async (req: Request, res: Response) => {
     if (!settings) {
       settings = new SystemSettings({
         systemName: 'Sangguniang Bayan Transparency Portal',
+        systemLogos: [], // Initialize empty array for multiple logos
         themeColors: {
           primary: '#F59E0B',
           secondary: '#92400E',
@@ -78,6 +79,73 @@ router.put('/',
       res.json({ message: 'Settings updated successfully', settings });
     } catch (error) {
       console.error('Update system settings error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+// Upload multiple system logos (max 3)
+router.post('/logos', 
+  authenticate, 
+  authorize(['System Administrator']),
+  uploadMultiple,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
+
+      let settings = await SystemSettings.findOne();
+      if (!settings) {
+        settings = new SystemSettings();
+      }
+
+      const files = req.files as any[];
+      const newLogos = files.map(file => file.filename);
+      
+      // Initialize systemLogos array if it doesn't exist
+      if (!settings.systemLogos) {
+        settings.systemLogos = [];
+      }
+      
+      // Add new logos (limit to 3 total)
+      settings.systemLogos = [...settings.systemLogos, ...newLogos].slice(0, 3);
+      settings.updatedAt = new Date();
+      await settings.save();
+
+      res.json({ message: 'Logos uploaded successfully', settings });
+    } catch (error) {
+      console.error('Upload logos error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+// Delete system logo
+router.delete('/logo/:index', 
+  authenticate, 
+  authorize(['System Administrator']),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { index } = req.params;
+      const logoIndex = parseInt(Array.isArray(index) ? index[0] : index);
+
+      let settings = await SystemSettings.findOne();
+      if (!settings) {
+        return res.status(404).json({ message: 'Settings not found' });
+      }
+
+      if (settings.systemLogos && settings.systemLogos.length > 0) {
+        if (logoIndex >= 0 && logoIndex < settings.systemLogos.length) {
+          settings.systemLogos.splice(logoIndex, 1);
+          settings.updatedAt = new Date();
+          await settings.save();
+        }
+      }
+
+      res.json({ message: 'Logo deleted successfully', settings });
+    } catch (error) {
+      console.error('Delete logo error:', error);
       res.status(500).json({ message: 'Server error' });
     }
   }
@@ -566,5 +634,83 @@ router.get('/stats', async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Upload official seal
+router.post('/seal', 
+  authenticate, 
+  authorize(['System Administrator']),
+  uploadSingle,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      let settings = await SystemSettings.findOne();
+      if (!settings) {
+        settings = new SystemSettings();
+      }
+
+      // Initialize officialSeal if it doesn't exist
+      if (!settings.officialSeal) {
+        settings.officialSeal = {
+          image: '',
+          title: '',
+          description: ''
+        };
+      }
+
+      settings.officialSeal.image = req.file.filename;
+      await settings.save();
+
+      res.json({ 
+        message: 'Official seal uploaded successfully',
+        seal: settings.officialSeal
+      });
+    } catch (error) {
+      console.error('Upload seal error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+
+// Update official seal details
+router.put('/seal',
+  authenticate,
+  authorize(['System Administrator']),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { title, description, image } = req.body;
+
+      let settings = await SystemSettings.findOne();
+      if (!settings) {
+        return res.status(404).json({ message: 'Settings not found' });
+      }
+
+      // Initialize officialSeal if it doesn't exist
+      if (!settings.officialSeal) {
+        settings.officialSeal = {
+          image: '',
+          title: '',
+          description: ''
+        };
+      }
+
+      if (title !== undefined) settings.officialSeal.title = title;
+      if (description !== undefined) settings.officialSeal.description = description;
+      if (image !== undefined) settings.officialSeal.image = image;
+
+      await settings.save();
+
+      res.json({ 
+        message: 'Official seal updated successfully',
+        seal: settings.officialSeal
+      });
+    } catch (error) {
+      console.error('Update seal error:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
 
 export default router;

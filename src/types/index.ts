@@ -154,6 +154,7 @@ export interface SystemSettings {
   _id: string;
   systemName: string;
   systemLogo: string;
+  systemLogos: string[]; // Array to support multiple logos
   themeColors: {
     primary: string;
     secondary: string;
@@ -171,6 +172,11 @@ export interface SystemSettings {
   };
   location?: string;
   transparencyTitle?: string;
+  officialSeal?: {
+    image: string;
+    title: string;
+    description: string;
+  };
   officeHours?: {
     monday: string;
     tuesday: string;

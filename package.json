@@ -25,8 +25,18 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "npm run start:monitor",
+    "start:network": "node scripts/start-network.js && cross-env PORT=$FRONTEND_PORT react-scripts start",
+    "start:monitor": "node scripts/network-monitor.js monitor & cross-env PORT=$FRONTEND_PORT react-scripts start",
+    "start:dev": "cross-env PORT=$FRONTEND_PORT react-scripts start",
     "build": "react-scripts build",
+    "serve": "node scripts/serve-with-api.js",
+    "serve:network": "node scripts/serve-network.js",
+    "serve:monitor": "node scripts/network-monitor.js monitor & node scripts/serve-network.js",
+    "serve:api": "node scripts/serve-with-api.js",
+    "network:check": "node scripts/network-monitor.js check",
+    "network:update": "node scripts/network-monitor.js update",
+    "network:serve": "node scripts/serve-network.js check",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -50,6 +60,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",
+    "cross-env": "^10.1.0",
     "postcss": "^8.5.8"
   }
 }

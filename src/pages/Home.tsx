@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SystemSettings } from '../types';
 import { getImageUrl } from '../utils/imageUtils';
-import api from '../services/api';
+import api, { apiWithRetry } from '../services/api';
 
 const Home: React.FC = () => {
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [imagesPreloaded, setImagesPreloaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [showAllModal, setShowAllModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [visibleProjectImages, setVisibleProjectImages] = useState<Set<number>>(new Set([0, 1, 2, 3, 4]));
+  const [, setVisibleProjectImages] = useState<Set<number>>(new Set([0, 1, 2, 3, 4]));
 
   // Function to preload images with performance optimization
   const preloadImages = useCallback(async (imageUrls: string[]): Promise<void> => {
@@ -59,7 +59,7 @@ const Home: React.FC = () => {
       try {
         console.log('Starting data fetch...');
         setLoading(true);
-        const settingsResponse = await api.get('/settings');
+        const settingsResponse = await apiWithRetry.get('/settings');
         const settingsData = settingsResponse.data;
         console.log('Settings data loaded:', settingsData);
         setSystemSettings(settingsData);
@@ -115,78 +115,15 @@ const Home: React.FC = () => {
         setImagesPreloaded(true);
         setLoading(false);
         console.log('Loading complete - showing content');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch data:', error);
+        setError(error?.response?.data?.message || error?.message || 'Failed to load content. Please check your connection and try again.');
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
-
-  // Auto-slide for main carousel
-  useEffect(() => {
-    if (systemSettings?.carouselImages && systemSettings.carouselImages.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentImageIndex((prev) => (prev + 1) % systemSettings.carouselImages.length);
-      }, 5000); // Change slide every 5 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [systemSettings?.carouselImages]);
-
-  // Auto-slide for Organization Structure
-  useEffect(() => {
-    if (systemSettings?.organizationStructure && systemSettings.organizationStructure.length > 0) {
-      const cats = categorizeStaff(systemSettings.organizationStructure);
-      const categoryNames = Object.keys(cats).filter(cat => cats[cat as keyof typeof cats].length > 0);
-      
-      if (categoryNames.length > 1) {
-        const interval = setInterval(() => {
-          setCurrentCategoryIndex((prev) => (prev + 1) % categoryNames.length);
-        }, 4000); // Change slide every 4 seconds
-
-        return () => clearInterval(interval);
-      }
-    }
-  }, [systemSettings?.organizationStructure]);
-
-  // Intersection Observer for lazy loading project images
-  useEffect(() => {
-    if (!systemSettings?.projectImages || systemSettings.projectImages.length === 0) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = parseInt(entry.target.getAttribute('data-project-index') || '0');
-            setVisibleProjectImages((prev) => {
-              if (!prev.has(index)) {
-                return new Set(prev).add(index);
-              }
-              return prev;
-            });
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: '50px' }
-    );
-
-    const elements = document.querySelectorAll('[data-project-index]');
-    elements.forEach((el) => observer.observe(el));
-
-    return () => {
-      elements.forEach((el) => observer.unobserve(el));
-      observer.disconnect();
-    };
-  }, [systemSettings?.projectImages?.length]);
-
-  // Memoized project data for performance
-  const memoizedProjectImages = useMemo(() => {
-    return systemSettings?.projectImages?.slice(0, 10) || [];
-  }, [systemSettings?.projectImages]);
+  }, [preloadImages]);
 
   // Memoized categorize staff function
   const memoizedCategorizeStaff = useCallback((staff: any[]) => {
@@ -219,8 +156,71 @@ const Home: React.FC = () => {
   }, []);
 
   // Static carousels - no animations
-
   const categorizeStaff = memoizedCategorizeStaff;
+
+  // Auto-slide for main carousel
+  useEffect(() => {
+    if (systemSettings?.carouselImages && systemSettings.carouselImages.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % systemSettings.carouselImages.length);
+      }, 5000); // Change slide every 5 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [systemSettings?.carouselImages]);
+
+  // Auto-slide for Organization Structure
+  useEffect(() => {
+    if (systemSettings?.organizationStructure && systemSettings.organizationStructure.length > 0) {
+      const cats = categorizeStaff(systemSettings.organizationStructure);
+      const categoryNames = Object.keys(cats).filter(cat => cats[cat as keyof typeof cats].length > 0);
+      
+      if (categoryNames.length > 1) {
+        const interval = setInterval(() => {
+          setCurrentCategoryIndex((prev) => (prev + 1) % categoryNames.length);
+        }, 4000); // Change slide every 4 seconds
+
+        return () => clearInterval(interval);
+      }
+    }
+  }, [systemSettings?.organizationStructure, categorizeStaff]);
+
+  // Intersection Observer for lazy loading project images
+  useEffect(() => {
+    if (!systemSettings?.projectImages || systemSettings.projectImages.length === 0) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = parseInt(entry.target.getAttribute('data-project-index') || '0');
+            setVisibleProjectImages((prev) => {
+              if (!prev.has(index)) {
+                return new Set(prev).add(index);
+              }
+              return prev;
+            });
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    const elements = document.querySelectorAll('[data-project-index]');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+      observer.disconnect();
+    };
+  }, [systemSettings?.projectImages, systemSettings?.projectImages?.length]);
+
+  // Memoized project data for performance
+  const memoizedProjectImages = useMemo(() => {
+    return systemSettings?.projectImages?.slice(0, 10) || [];
+  }, [systemSettings?.projectImages]);
 
   if (loading) {
     return (
@@ -228,10 +228,22 @@ const Home: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
           <p className="text-black">
-            {!systemSettings ? 'Loading content...' : 
-             !imagesPreloaded ? `Preloading ${imagesPreloaded ? '0' : '...'} images...` : 
+            {!systemSettings && !error ? 'Loading content...' : 
+             !imagesPreloaded && !error ? `Preloading images...` : 
+             error ? 'Connection issue detected...' : 
              'Almost ready...'}
           </p>
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg max-w-md mx-auto">
+              <p className="text-red-600 text-sm">{error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -250,9 +262,9 @@ const Home: React.FC = () => {
             decoding="async"
           />
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-white bg-black bg-opacity-50 p-4 sm:p-6 md:p-8 rounded-lg backdrop-blur-sm mx-4 max-w-4xl">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 sm:mb-4 drop-shadow-lg line-clamp-2">{systemSettings?.transparencyTitle || 'Sangguniang Bayan Transparency'}</h2>
-              <p className="text-sm sm:text-lg md:text-2xl lg:text-3xl drop-shadow-md">{systemSettings?.location || 'San Francisco, Southern Leyte'}</p>
+            <div className="text-center text-white bg-black bg-opacity-50 p-2 sm:p-3 md:p-4 rounded-lg backdrop-blur-sm mx-2 sm:mx-4 max-w-6xl w-full">
+              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold mb-1 sm:mb-2 drop-shadow-lg animate-pulse leading-tight">{systemSettings?.transparencyTitle || 'Sangguniang Bayan Transparency'}</h2>
+              <p className="text-xs sm:text-xs md:text-sm lg:text-base xl:text-lg drop-shadow-md animate-pulse leading-tight">{systemSettings?.location || 'San Francisco, Southern Leyte'}</p>
             </div>
           </div>
           {/* Preload next image */}
@@ -280,6 +292,45 @@ const Home: React.FC = () => {
               <p className="text-white leading-relaxed text-sm sm:text-base text-center">
                 {systemSettings?.aboutOffice || 'The Sangguniang Bayan serves as the legislative body of our municipality.'}
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Official Seal */}
+        <section className="mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-black mb-2">Official Seal</h2>
+          <div className="bg-gradient-to-br from-yellow-900 via-yellow-800 to-yellow-900 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-yellow-700 p-6 sm:p-8">
+            <div className="text-center">
+              {/* Seal Image */}
+              {systemSettings?.officialSeal?.image ? (
+                <div className="mb-6">
+                  <img 
+                    src={getImageUrl(systemSettings.officialSeal.image)}
+                    alt="Official Seal"
+                    className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 mx-auto object-contain drop-shadow-lg"
+                  />
+                </div>
+              ) : (
+                <div className="mb-6">
+                  <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 mx-auto bg-yellow-700 rounded-full flex items-center justify-center">
+                    <svg className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                </div>
+              )}
+              
+              {/* Seal Title */}
+              <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-yellow-300 mb-4 drop-shadow-lg">
+                {systemSettings?.officialSeal?.title || 'Official Seal of Sangguniang Bayan'}
+              </h3>
+              
+              {/* Seal Description */}
+              <div className="max-w-4xl mx-auto">
+                <p className="text-yellow-100 leading-relaxed text-sm sm:text-base text-center">
+                  {systemSettings?.officialSeal?.description || 'The official seal represents the authority, integrity, and commitment of the Sangguniang Bayan in serving the people of our municipality with dedication and excellence.'}
+                </p>
+              </div>
             </div>
           </div>
         </section>

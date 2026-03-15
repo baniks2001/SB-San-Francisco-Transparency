@@ -135,7 +135,7 @@ const AdminTemplates: React.FC = () => {
 
       let templateId: string;
       if (editingTemplate) {
-        const response = await api.put(`/templates/${editingTemplate._id}`, templateData);
+        await api.put(`/templates/${editingTemplate._id}`, templateData);
         templateId = editingTemplate._id;
         setSuccess('Template updated successfully!');
       } else {

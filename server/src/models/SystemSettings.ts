@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ISystemSettings extends Document {
   systemName: string;
   systemLogo?: string;
+  systemLogos: string[];
   themeColors: {
     primary: string;
     secondary: string;
@@ -20,6 +21,11 @@ export interface ISystemSettings extends Document {
   };
   location?: string;
   transparencyTitle?: string;
+  officialSeal?: {
+    image: string;
+    title: string;
+    description: string;
+  };
   officeHours?: {
     monday: string;
     tuesday: string;
@@ -98,6 +104,7 @@ const systemSettingsSchema = new Schema<ISystemSettings>({
     type: String,
     default: ''
   },
+  systemLogos: [{ type: String, default: () => [] }],
   themeColors: {
     type: themeColorsSchema,
     default: () => ({})
@@ -129,6 +136,11 @@ const systemSettingsSchema = new Schema<ISystemSettings>({
   transparencyTitle: {
     type: String,
     default: 'Sangguniang Bayan Transparency'
+  },
+  officialSeal: {
+    image: { type: String, default: '' },
+    title: { type: String, default: 'Official Seal of Sangguniang Bayan' },
+    description: { type: String, default: 'The official seal represents the authority, integrity, and commitment of the Sangguniang Bayan in serving the people of our municipality with dedication and excellence.' }
   },
   officeHours: {
     type: officeHoursSchema,
