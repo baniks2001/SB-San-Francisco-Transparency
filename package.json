@@ -30,6 +30,7 @@
     "start:monitor": "node scripts/network-monitor.js monitor & cross-env PORT=$FRONTEND_PORT react-scripts start",
     "start:dev": "cross-env PORT=$FRONTEND_PORT react-scripts start",
     "build": "react-scripts build",
+    "build:netlify": "react-scripts build",
     "serve": "node scripts/serve-with-api.js",
     "serve:network": "node scripts/serve-network.js",
     "serve:monitor": "node scripts/network-monitor.js monitor & node scripts/serve-network.js",
