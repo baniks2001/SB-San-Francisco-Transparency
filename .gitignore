@@ -69,7 +69,7 @@ jspm_packages/
 
 # Gatsby files
 .cache/
-public
+# public - REMOVED: React public folder should be committed
 
 # Storybook build outputs
 .out
