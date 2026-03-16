@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Resolution, ResolutionTemplate } from '../../types';
 import api from '../../services/api';
-import { getImageUrl, getLogoUrl } from '../../utils/imageUtils';
+import { getLogoUrl } from '../../utils/imageUtils';
+import NotificationModal from '../../components/NotificationModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const AdminResolutions: React.FC = () => {
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
@@ -14,8 +16,8 @@ const AdminResolutions: React.FC = () => {
     title: '', // Keep title for header display only
     content: '',
     secondContent: '',
-    present: [] as Array<{name: string, position: string}>,
-    absent: [] as Array<{name: string, position: string}>,
+    present: [] as Array<{name: string, position: string, position2?: string}>,
+    absent: [] as Array<{name: string, position: string, position2?: string}>,
     status: 'Draft' as 'Draft' | 'Pending' | 'Approved',
     isPublic: false,
     templateId: '',
@@ -101,6 +103,20 @@ const AdminResolutions: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     fetchResolutions();
@@ -129,14 +145,42 @@ const AdminResolutions: React.FC = () => {
     }
   };
 
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
+      // Preserve existing templateId when editing a resolution that already has one
+      const finalTemplateId = editingResolution && editingResolution.templateId 
+        ? (typeof editingResolution.templateId === 'object' && editingResolution.templateId !== null 
+            ? editingResolution.templateId._id 
+            : editingResolution.templateId.toString())
+        : formData.templateId;
+
       const resolutionData = {
         ...formData,
+        templateId: finalTemplateId,
         signatories: formData.signatories.length > 0 ? formData.signatories : [
           { name: 'Presiding Officer', position: 'Sangguniang Bayan Chairperson', alignment: 'Center' as const, isBold: false, isUnderline: true }
         ],
@@ -170,22 +214,31 @@ const AdminResolutions: React.FC = () => {
 
       fetchResolutions();
       closeModal();
+      showNotification('Success', editingResolution ? 'Resolution updated successfully!' : 'Resolution created successfully!', 'success');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save resolution');
+      showNotification('Error', err.response?.data?.message || 'Failed to save resolution', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this resolution?')) return;
-
-    try {
-      await api.delete(`/resolutions/${id}`);
-      fetchResolutions();
-    } catch (err) {
-      setError('Failed to delete resolution');
-    }
+    showConfirmation(
+      'Delete Resolution',
+      'Are you sure you want to delete this resolution? This action cannot be undone.',
+      async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await api.delete(`/resolutions/${id}`);
+          showNotification('Success', 'Resolution deleted successfully!', 'success');
+          fetchResolutions();
+        } catch (err: any) {
+          showNotification('Error', err.response?.data?.message || 'Failed to delete resolution', 'error');
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false, isOpen: false }));
+        }
+      }
+    );
   };
 
   const openModal = (resolution?: Resolution) => {
@@ -196,12 +249,16 @@ const AdminResolutions: React.FC = () => {
         series: resolution.series,
         title: resolution.title,
         content: resolution.content,
-        secondContent: (resolution as any).secondContent || '',
-        present: (resolution as any).present || [],
-        absent: (resolution as any).absent || [],
+        secondContent: resolution.secondContent || '',
+        present: resolution.present || [],
+        absent: resolution.absent || [],
         status: resolution.status,
         isPublic: resolution.isPublic,
-        templateId: resolution.templateId || '',
+        templateId: resolution.templateId ? 
+          (typeof resolution.templateId === 'object' && resolution.templateId !== null 
+            ? resolution.templateId._id 
+            : resolution.templateId.toString()) 
+          : '',
         paperSize: resolution.paperSize || 'A4',
         signatories: (resolution.signatories || []).map(sig => ({
           name: sig.name,
@@ -465,7 +522,7 @@ const AdminResolutions: React.FC = () => {
     }
   };
 
-  const downloadDocument = (resolution: Resolution, format: 'pdf' | 'word') => {
+  const downloadDocument = (resolution: Resolution) => {
     // Handle both string and ObjectId formats
     let templateId: string;
     if (typeof resolution.templateId === 'string') {
@@ -485,32 +542,22 @@ const AdminResolutions: React.FC = () => {
     
     const documentContent = generateDocumentHTML(resolution, selectedTemplate);
     
-    if (format === 'pdf') {
-      // For PDF, we'll use the browser's print to PDF functionality
-      const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-      if (printWindow) {
-        printWindow.document.write(documentContent);
-        printWindow.document.title = `Resolution ${resolution.resolutionNumber}`;
-        printWindow.document.close();
-        
-        printWindow.onload = () => {
+    // Generate PDF using browser's print functionality
+    const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    if (printWindow) {
+      printWindow.document.write(documentContent);
+      printWindow.document.title = `Resolution ${resolution.resolutionNumber}`;
+      printWindow.document.close();
+      
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          // Note: User needs to select "Save as PDF" in the print dialog
           setTimeout(() => {
-            printWindow.print();
-            // Note: User needs to select "Save as PDF" in the print dialog
-          }, 500);
-        };
-      }
-    } else if (format === 'word') {
-      // For Word, create a downloadable HTML file that can be opened in Word
-      const blob = new Blob([documentContent], { type: 'text/html' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Resolution_${resolution.resolutionNumber}.doc`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+            printWindow.close();
+          }, 1000);
+        }, 500);
+      };
     }
   };
 
@@ -551,15 +598,9 @@ const AdminResolutions: React.FC = () => {
   };
 
   const generateDocumentHTML = (resolution: Resolution, template: ResolutionTemplate) => {
-    const present = (resolution as any).present || [];
-    const absent = (resolution as any).absent || [];
-    const secondContent = (resolution as any).secondContent || '';
-    
-    const formatPresentAbsent = (members: Array<{name: string, position: string}>) => {
-      return members.map(member => 
-        `                      ${member.name}                     ${member.position}`
-      ).join('<br>');
-    };
+    const present = resolution.present || [];
+    const absent = resolution.absent || [];
+    const secondContent = resolution.secondContent || '';
     
     return `
       <!DOCTYPE html>
@@ -567,44 +608,44 @@ const AdminResolutions: React.FC = () => {
       <head>
         <title>Resolution ${resolution.resolutionNumber}</title>
         <style>
-          @page { margin: 1in; }
+          @page { margin: 0.5in; }
           body { 
             font-family: Arial, sans-serif; 
             margin: 0; 
-            padding: 20px; 
+            padding: 10px; 
             background-color: white;
           }
-          .header { text-align: center; margin-bottom: 30px; }
-          .title-section { text-align: center; margin: 30px 0; }
+          .header { text-align: center; margin-bottom: 10px; }
+          .title-section { text-align: center; margin: 15px 0; }
           .content-section { 
-            margin: 20px 0; 
+            margin: 10px 0; 
             page-break-inside: avoid;
           }
           .content-text { 
-            padding: 10px 0; 
-            line-height: 1.6;
-            margin-bottom: 15px;
+            padding: 5px 0; 
+            line-height: 1.1;
+            margin-bottom: 5px;
             page-break-inside: avoid;
           }
           .title-section {
-            margin: 20px 0;
+            margin: 10px 0;
             text-align: center;
             page-break-after: avoid;
           }
           .signatories {
-            margin-top: 40px;
+            margin-top: 20px;
             page-break-inside: avoid;
           }
           .signatory {
-            margin: 15px 0;
+            margin: 10px 0;
             page-break-inside: avoid;
           }
           .attested-by {
-            margin-top: 30px;
+            margin-top: 15px;
             page-break-inside: avoid;
           }
           .attested-signatory {
-            margin: 10px 0;
+            margin: 5px 0;
             page-break-inside: avoid;
           }
           /* Prevent page breaks before these elements */
@@ -637,33 +678,53 @@ const AdminResolutions: React.FC = () => {
         </div>
 
         <!-- Resolution Content -->
-        <div class="content-section">
-          <div class="content-text">${resolution.content.replace(/\n/g, '<br>')}</div>
+        <div class="content-section" style="text-align: center;">
+          <div class="content-text" style="text-align: left; display: inline-block;">${resolution.content.replace(/\n/g, '<br>')}</div>
         </div>
+
+        <!-- Add more space after main content -->
+        <div style="margin-bottom: 15px;"></div>
 
         <!-- Present and Absent Members -->
         <div class="content-section">
           <!-- Present Members -->
           ${present.length > 0 ? `
-            <div class="content-text" style="margin-bottom: 20px; color: #000000;">
+            <div class="content-text" style="margin-bottom: 15px; color: #000000; text-align: left;">
               <div style="font-weight: bold; margin-bottom: 10px; color: #000000;">Present:</div>
 ${present.map((member: any, index: number) => 
-  `  <div style="margin-bottom: 2px; color: #000000;">
-    <span style="display: inline-block; width: 250px; color: #000000;">${member.name}</span>
-    <span style="font-weight: bold; color: #000000;">${member.position}</span>
+  `  <div style="margin-bottom: 2px; color: #000000; line-height: 1.1;">
+    <div style="display: flex; align-items: flex-start; justify-content: center;">
+      <span style="display: inline-block; min-width: 200px; color: #000000;">${member.name}</span>
+      <div style="margin-left: 50px;">
+        <div style="font-weight: bold; color: #000000;">${member.position}</div>
+        ${member.position2 ? `
+          <div style="font-weight: bold; color: #000000; margin-top: 0px;">${member.position2}</div>
+        ` : ''}
+      </div>
+    </div>
   </div>`
 ).join('\n')}
             </div>
           ` : ''}
 
+          <!-- Add more space between Present and Absent -->
+          <div style="margin-bottom: 10px;"></div>
+
           <!-- Absent Members -->
           ${absent.length > 0 ? `
-            <div class="content-text" style="margin-bottom: 20px; color: #000000;">
+            <div class="content-text" style="margin-bottom: 15px; color: #000000; text-align: left;">
               <div style="font-weight: bold; margin-bottom: 10px; color: #000000;">Absent:</div>
 ${absent.map((member: any, index: number) => 
-  `  <div style="margin-bottom: 2px; color: #000000;">
-    <span style="display: inline-block; width: 250px; color: #000000;">${member.name}</span>
-    <span style="font-weight: bold; color: #000000;">${member.position}</span>
+  `  <div style="margin-bottom: 2px; color: #000000; line-height: 1.1;">
+    <div style="display: flex; align-items: flex-start; justify-content: center;">
+      <span style="display: inline-block; min-width: 200px; color: #000000;">${member.name}</span>
+      <div style="margin-left: 50px;">
+        <div style="font-weight: bold; color: #000000;">${member.position}</div>
+        ${member.position2 ? `
+          <div style="font-weight: bold; color: #000000; margin-top: 0px;">${member.position2}</div>
+        ` : ''}
+      </div>
+    </div>
   </div>`
 ).join('\n')}
             </div>
@@ -677,8 +738,8 @@ ${absent.map((member: any, index: number) =>
 
         <!-- Second Content -->
         ${secondContent ? `
-          <div class="content-section">
-            <div class="content-text" style="font-size: ${formData.secondContentFormat.fontSize}px; font-family: ${formData.secondContentFormat.fontFamily}; font-weight: ${formData.secondContentFormat.isBold ? 'bold' : 'normal'}; text-decoration: ${formData.secondContentFormat.isUnderline ? 'underline' : 'none'}; text-align: ${formData.secondContentFormat.alignment.toLowerCase()};">${secondContent.replace(/\n/g, '<br>')}</div>
+          <div class="content-section" style="text-align: center; page-break-inside: auto;">
+            <div class="content-text" style="font-size: ${formData.secondContentFormat.fontSize}px; font-family: ${formData.secondContentFormat.fontFamily}; font-weight: ${formData.secondContentFormat.isBold ? 'bold' : 'normal'}; text-decoration: ${formData.secondContentFormat.isUnderline ? 'underline' : 'none'}; text-align: left; display: inline-block; page-break-inside: auto;">${secondContent.replace(/\n/g, '<br>')}</div>
           </div>
         ` : ''}
 
@@ -697,8 +758,8 @@ ${absent.map((member: any, index: number) =>
 
         <!-- Attested By -->
         ${(resolution as any).attestedBy && (resolution as any).attestedBy.length > 0 ? `
-          <div style="margin-top: 30px;">
-            <div style="text-align: left; font-weight: bold; font-size: 14px; margin-bottom: 20px;">ATTESTED BY:</div>
+          <div style="margin-top: 15px;">
+            <div style="text-align: left; font-weight: bold; font-size: 14px; margin-bottom: 10px;">ATTESTED BY:</div>
             <div class="attested-by">
               ${(resolution as any).attestedBy.map((attested: any) => `
                 <div class="attested-signatory" style="text-align: ${attested.alignment || 'left'}; font-size: ${attested.fontSize || 14}px; font-family: ${attested.fontFamily || 'Arial'};">
@@ -742,7 +803,7 @@ ${absent.map((member: any, index: number) =>
   };
 
   const addPresentMember = () => {
-    const newMember = { name: '', position: '' };
+    const newMember = { name: '', position: '', position2: '' };
     setFormData({
       ...formData,
       present: [...formData.present, newMember]
@@ -750,7 +811,7 @@ ${absent.map((member: any, index: number) =>
   };
 
   const addAbsentMember = () => {
-    const newMember = { name: '', position: '' };
+    const newMember = { name: '', position: '', position2: '' };
     setFormData({
       ...formData,
       absent: [...formData.absent, newMember]
@@ -827,9 +888,12 @@ ${absent.map((member: any, index: number) =>
 
   // Helper function to render the document preview
   const renderPreview = () => {
-    const selectedTemplate = templates.find(t => t._id === formData.templateId);
+    // formData.templateId is always a string in the form state
+    const templateId = formData.templateId || '';
+    
+    const selectedTemplate = templates.find(t => t._id === templateId);
     console.log('Selected template:', selectedTemplate);
-    console.log('Template ID from formData:', formData.templateId);
+    console.log('Template ID from formData:', templateId);
     console.log('Available templates:', templates);
     
     if (!selectedTemplate) {
@@ -926,9 +990,16 @@ ${absent.map((member: any, index: number) =>
                 }}
               >
                 {formData.present.map((member, index) => (
-                  <div key={index} style={{ marginBottom: '2px', color: '#000000' }}>
-                    <span style={{ display: 'inline-block', width: '250px', color: '#000000' }}>{member.name}</span>
-                    <span style={{ fontWeight: 'bold', color: '#000000' }}>{member.position}</span>
+                  <div key={index} style={{ marginBottom: '2px', color: '#000000', lineHeight: 1.1 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+                      <span style={{ display: 'inline-block', minWidth: '200px', color: '#000000' }}>{member.name}</span>
+                      <div style={{ marginLeft: '50px' }}>
+                        <div style={{ fontWeight: 'bold', color: '#000000' }}>{member.position}</div>
+                        {member.position2 && (
+                          <div style={{ fontWeight: 'bold', color: '#000000', marginTop: '0px' }}>{member.position2}</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -964,9 +1035,16 @@ ${absent.map((member: any, index: number) =>
                 }}
               >
                 {formData.absent.map((member, index) => (
-                  <div key={index} style={{ marginBottom: '2px', color: '#000000' }}>
-                    <span style={{ display: 'inline-block', width: '250px', color: '#000000' }}>{member.name}</span>
-                    <span style={{ fontWeight: 'bold', color: '#000000' }}>{member.position}</span>
+                  <div key={index} style={{ marginBottom: '2px', color: '#000000', lineHeight: 1.1 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+                      <span style={{ display: 'inline-block', minWidth: '200px', color: '#000000' }}>{member.name}</span>
+                      <div style={{ marginLeft: '50px' }}>
+                        <div style={{ fontWeight: 'bold', color: '#000000' }}>{member.position}</div>
+                        {member.position2 && (
+                          <div style={{ fontWeight: 'bold', color: '#000000', marginTop: '0px' }}>{member.position2}</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1123,12 +1201,7 @@ ${absent.map((member: any, index: number) =>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-900 border border-red-700 rounded-lg p-4">
-          <p className="text-red-200">{error}</p>
-        </div>
-      )}
-
+      
       {/* Resolutions Table */}
       <div className="bg-white rounded-xl shadow-xl border border-gray-300 overflow-hidden">
         {/* Mobile Card View */}
@@ -1176,25 +1249,12 @@ ${absent.map((member: any, index: number) =>
                   >
                     View
                   </button>
-                  <div className="relative group">
-                    <button className="px-3 py-1 bg-purple-600 text-gray-800 rounded text-xs hover:bg-purple-700">
-                      Download
-                    </button>
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                      <button
-                        onClick={() => downloadDocument(resolution, 'pdf')}
-                        className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
-                      >
-                        📄 Download PDF
-                      </button>
-                      <button
-                        onClick={() => downloadDocument(resolution, 'word')}
-                        className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
-                      >
-                        📝 Download Word
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => downloadDocument(resolution)}
+                    className="px-3 py-1 bg-purple-600 text-gray-800 rounded text-xs hover:bg-purple-700"
+                  >
+                    � Download PDF
+                  </button>
                   <button
                     onClick={() => printDocument(resolution)}
                     className="px-3 py-1 bg-orange-600 text-gray-800 rounded text-xs hover:bg-orange-700"
@@ -1281,25 +1341,12 @@ ${absent.map((member: any, index: number) =>
                         View
                       </button>
                       <span className="text-gray-400">|</span>
-                      <div className="relative group">
-                        <button className="text-purple-400 hover:text-purple-300 font-medium">
-                          Download
-                        </button>
-                        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                          <button
-                            onClick={() => downloadDocument(resolution, 'pdf')}
-                            className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
-                          >
-                            📄 Download PDF
-                          </button>
-                          <button
-                            onClick={() => downloadDocument(resolution, 'word')}
-                            className="block w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 whitespace-nowrap"
-                          >
-                            📝 Download Word
-                          </button>
-                        </div>
-                      </div>
+                      <button
+                        onClick={() => downloadDocument(resolution)}
+                        className="text-purple-400 hover:text-purple-300 font-medium"
+                      >
+                        � Download PDF
+                      </button>
                       <span className="text-gray-400">|</span>
                       <button
                         onClick={() => printDocument(resolution)}
@@ -1364,19 +1411,42 @@ ${absent.map((member: any, index: number) =>
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-white mb-1">
                       Select Template
+                      {editingResolution && editingResolution.templateId && (
+                        <span className="ml-2 text-xs text-yellow-400">(Template is locked for this resolution)</span>
+                      )}
                     </label>
-                    <select
-                      value={formData.templateId}
-                      onChange={(e) => setFormData({...formData, templateId: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                    >
-                      <option value="">Select a template...</option>
-                      {templates.map((template) => (
-                        <option key={template._id} value={template._id}>
-                          {template.templateName || 'Template ' + template._id}
-                        </option>
-                      ))}
-                    </select>
+                    {editingResolution && editingResolution.templateId ? (
+                      <div className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                        {(() => {
+                          // Handle both string ID and populated template object
+                          if (typeof editingResolution.templateId === 'object' && editingResolution.templateId !== null) {
+                            // It's a populated template object
+                            return editingResolution.templateId.templateName || 'Template ' + editingResolution.templateId._id;
+                          } else {
+                            // It's a string ID
+                            const templateId = editingResolution.templateId as string;
+                            const foundTemplate = templates.find(t => t._id === templateId);
+                            return foundTemplate?.templateName || 'Template ' + templateId;
+                          }
+                        })()}
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.templateId}
+                        onChange={(e) => setFormData({...formData, templateId: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      >
+                        <option value="">Select a template...</option>
+                        {templates.map((template) => (
+                          <option key={template._id} value={template._id}>
+                            {template.templateName || 'Template ' + template._id}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {editingResolution && editingResolution.templateId && (
+                      <p className="text-xs text-gray-400 mt-1">Template cannot be changed once a resolution is created with a template.</p>
+                    )}
                   </div>
 
                   {/* Paper Size Selection */}
@@ -1467,28 +1537,41 @@ ${absent.map((member: any, index: number) =>
                     </div>
                     <div className="space-y-2">
                       {formData.present.map((member, index) => (
-                        <div key={index} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={member.name}
-                            onChange={(e) => updatePresentMember(index, 'name', e.target.value)}
-                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            placeholder="Name"
-                          />
-                          <input
-                            type="text"
-                            value={member.position}
-                            onChange={(e) => updatePresentMember(index, 'position', e.target.value)}
-                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            placeholder="Position"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removePresentMember(index)}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                          >
-                            Remove
-                          </button>
+                        <div key={index} className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={member.name}
+                              onChange={(e) => updatePresentMember(index, 'name', e.target.value)}
+                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                              placeholder="Name"
+                            />
+                            <input
+                              type="text"
+                              value={member.position}
+                              onChange={(e) => updatePresentMember(index, 'position', e.target.value)}
+                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                              placeholder="Position"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removePresentMember(index)}
+                              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1"></div>
+                            <input
+                              type="text"
+                              value={member.position2 || ''}
+                              onChange={(e) => updatePresentMember(index, 'position2', e.target.value)}
+                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                              placeholder="Second Position (Optional)"
+                            />
+                            <div className="w-20"></div>
+                          </div>
                         </div>
                       ))}
                       {formData.present.length === 0 && (
@@ -1511,28 +1594,41 @@ ${absent.map((member: any, index: number) =>
                     </div>
                     <div className="space-y-2">
                       {formData.absent.map((member, index) => (
-                        <div key={index} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={member.name}
-                            onChange={(e) => updateAbsentMember(index, 'name', e.target.value)}
-                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            placeholder="Name"
-                          />
-                          <input
-                            type="text"
-                            value={member.position}
-                            onChange={(e) => updateAbsentMember(index, 'position', e.target.value)}
-                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            placeholder="Position"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeAbsentMember(index)}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                          >
-                            Remove
-                          </button>
+                        <div key={index} className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={member.name}
+                              onChange={(e) => updateAbsentMember(index, 'name', e.target.value)}
+                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                              placeholder="Name"
+                            />
+                            <input
+                              type="text"
+                              value={member.position}
+                              onChange={(e) => updateAbsentMember(index, 'position', e.target.value)}
+                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                              placeholder="Position"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeAbsentMember(index)}
+                              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1"></div>
+                            <input
+                              type="text"
+                              value={member.position2 || ''}
+                              onChange={(e) => updateAbsentMember(index, 'position2', e.target.value)}
+                              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                              placeholder="Second Position (Optional)"
+                            />
+                            <div className="w-20"></div>
+                          </div>
                         </div>
                       ))}
                       {formData.absent.length === 0 && (
@@ -2077,6 +2173,26 @@ ${absent.map((member: any, index: number) =>
           </div>
         </div>
       )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

@@ -26,7 +26,7 @@ router.get('/', async (req: Request, res: Response) => {
         aboutOffice: 'The Sangguniang Bayan serves as the legislative body of San Francisco, Southern Leyte.',
         mission: 'To provide transparent and accountable governance through responsive legislation.',
         vision: 'A progressive municipality with empowered citizens and sustainable development.',
-        coreValues: 'Integrity, Transparency, Accountability, Service, Excellence',
+        keyResponsibilities: 'Legislative oversight, policy development, community representation',
         contactInfo: {
           mobileNumbers: [],
           email: '',
@@ -238,7 +238,7 @@ router.delete('/carousel/:imageName',
 router.post('/projects', 
   authenticate, 
   authorize(['System Administrator']),
-  uploadMultiple,
+  uploadSingle,
   [
     body('projectName').trim().notEmpty().withMessage('Project name is required'),
     body('details').trim().notEmpty().withMessage('Project details are required')
@@ -250,29 +250,32 @@ router.post('/projects',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ message: 'No files uploaded' });
-      }
-
       const { projectName, details } = req.body;
-      const files = req.files as any[];
       
       let settings = await SystemSettings.findOne();
       if (!settings) {
         settings = new SystemSettings();
       }
 
-      const newProjects = files.map(file => ({
-        image: file.filename,
+      const newProject: {
+        projectName: string;
+        details: string;
+        image?: string;
+      } = {
         projectName,
         details
-      }));
+      };
 
-      settings.projectImages = [...settings.projectImages, ...newProjects];
+      // Add image if uploaded
+      if (req.file) {
+        newProject.image = req.file.filename;
+      }
+
+      settings.projectImages.push(newProject);
       settings.updatedAt = new Date();
       await settings.save();
 
-      res.json({ message: 'Project images uploaded successfully', settings });
+      res.json({ message: 'Project added successfully', settings });
     } catch (error) {
       console.error('Upload project images error:', error);
       res.status(500).json({ message: 'Server error' });
@@ -460,39 +463,6 @@ router.post('/organization-image',
       res.json({ message: 'Organization member image uploaded successfully' });
     } catch (error) {
       console.error('Upload organization image error:', error);
-      res.status(500).json({ message: 'Server error' });
-    }
-  }
-);
-
-// Add project image
-router.post('/projects', 
-  uploadSingle, 
-  async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
-      }
-
-      const { projectName, details } = req.body;
-      const settings = await SystemSettings.findOne();
-      
-      if (!settings) {
-        return res.status(404).json({ message: 'Settings not found' });
-      }
-
-      const newProject = {
-        projectName,
-        details,
-        image: req.file.filename
-      };
-
-      settings.projectImages.push(newProject);
-      await settings.save();
-      
-      res.status(201).json({ message: 'Project added successfully', project: newProject });
-    } catch (error) {
-      console.error('Add project image error:', error);
       res.status(500).json({ message: 'Server error' });
     }
   }

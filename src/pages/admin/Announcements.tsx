@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { SystemSettings } from '../../types';
 import api from '../../services/api';
+import NotificationModal from '../../components/NotificationModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
+import { SystemSettings } from '../../types';
 
 const AdminAnnouncements: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -11,6 +13,20 @@ const AdminAnnouncements: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     fetchSettings();
@@ -58,6 +74,26 @@ const AdminAnnouncements: React.FC = () => {
     setSuccess('');
   };
 
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -77,7 +113,7 @@ const AdminAnnouncements: React.FC = () => {
         await api.put(`/settings/announcements/${selectedAnnouncementIndex}`, updateFormData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        setSuccess('Announcement updated successfully!');
+        showNotification('Success', 'Announcement updated successfully!', 'success');
       } else {
         // Add new announcement
         const uploadFormData = new FormData();
@@ -91,28 +127,35 @@ const AdminAnnouncements: React.FC = () => {
         await api.post('/settings/announcements', uploadFormData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        setSuccess('Announcement added successfully!');
+        showNotification('Success', 'Announcement created successfully!', 'success');
       }
       
+      await fetchSettings();
       closeModal();
-      fetchSettings();
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to save announcement');
+      showNotification('Error', error.response?.data?.message || 'Failed to save announcement', 'error');
     }
   };
 
   const deleteAnnouncement = async (index: number) => {
-    if (!window.confirm('Are you sure you want to delete this announcement?')) {
-      return;
-    }
-
-    try {
-      await api.delete(`/settings/announcements/${index}`);
-      setSuccess('Announcement deleted successfully!');
-      fetchSettings();
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to delete announcement');
-    }
+    showConfirmation(
+      'Delete Announcement',
+      'Are you sure you want to delete this announcement? This action cannot be undone.',
+      async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          const updatedAnnouncements = [...(settings?.announcements || [])];
+          updatedAnnouncements.splice(index, 1);
+          await api.put('/settings', { announcements: updatedAnnouncements });
+          showNotification('Success', 'Announcement deleted successfully!', 'success');
+          await fetchSettings();
+        } catch (error: any) {
+          showNotification('Error', error.response?.data?.message || 'Failed to delete announcement', 'error');
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false, isOpen: false }));
+        }
+      }
+    );
   };
 
   if (loading) {
@@ -141,18 +184,7 @@ const AdminAnnouncements: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-900 border border-red-700 rounded-lg p-4">
-          <p className="text-red-200">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-900 border border-green-700 rounded-lg p-4">
-          <p className="text-green-200">{success}</p>
-        </div>
-      )}
-
+      
       {/* Announcements Table */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
@@ -309,6 +341,26 @@ const AdminAnnouncements: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

@@ -19,7 +19,10 @@ export interface Resolution {
   series: string;
   title: string;
   content: string;
-  templateId?: string;
+  secondContent?: string;
+  present?: Array<{name: string, position: string, position2?: string}>;
+  absent?: Array<{name: string, position: string, position2?: string}>;
+  templateId?: string | { _id: string; templateName: string }; // Can be string ID or populated template object
   status: 'Draft' | 'Pending' | 'Approved';
   isPublic: boolean;
   scannedCopy?: string;
@@ -169,6 +172,7 @@ export interface SystemSettings {
     mobileNumbers: string[];
     email: string;
     address: string;
+    facebook?: string;
   };
   location?: string;
   transparencyTitle?: string;
@@ -255,6 +259,23 @@ export interface ResolutionTemplate {
   paperSize: string;
   defaultPageCount: number;
   createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Activity {
+  _id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  type: 'meeting' | 'event' | 'hearing' | 'ceremony' | 'other';
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  organizer: string;
+  contactInfo?: string;
+  image?: string;
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }

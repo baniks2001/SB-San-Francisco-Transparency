@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getImageUrl } from '../utils/imageUtils';
-import api, { apiWithRetry } from '../services/api';
 import { SystemSettings } from '../types';
+import { getImageUrl } from '../utils/imageUtils';
+import apiWithRetry from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import GoogleMap from './GoogleMap';
 
 const PublicLayout: React.FC = () => {
@@ -140,6 +140,16 @@ const PublicLayout: React.FC = () => {
                     Home
                   </Link>
                   <Link
+                    to="/about"
+                    className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
+                      isActivePath('/about') 
+                        ? 'text-yellow-400 border-b-2 border-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                  >
+                    About
+                  </Link>
+                  <Link
                     to="/resolutions"
                     className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
                       isActivePath('/resolutions') 
@@ -178,6 +188,16 @@ const PublicLayout: React.FC = () => {
                     }`}
                   >
                     Vacancies
+                  </Link>
+                  <Link
+                    to="/announcements"
+                    className={`inline-flex items-center px-1 pt-1 text-xs sm:text-sm font-medium ${
+                      isActivePath('/announcements') 
+                        ? 'text-yellow-400 border-b-2 border-yellow-400' 
+                        : 'text-gray-300 hover:text-yellow-400'
+                    }`}
+                  >
+                    Announcements
                   </Link>
                 </div>
                 
@@ -265,6 +285,16 @@ const PublicLayout: React.FC = () => {
             Home
           </Link>
           <Link
+            to="/about"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              isActivePath('/about') 
+                ? 'text-yellow-400 bg-gray-700' 
+                : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
+            }`}
+          >
+            About
+          </Link>
+          <Link
             to="/resolutions"
             className={`block px-3 py-2 rounded-md text-base font-medium ${
               isActivePath('/resolutions') 
@@ -303,6 +333,16 @@ const PublicLayout: React.FC = () => {
             }`}
           >
             Vacancies
+          </Link>
+          <Link
+            to="/announcements"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              isActivePath('/announcements') 
+                ? 'text-yellow-400 bg-gray-700' 
+                : 'text-gray-300 hover:text-yellow-400 hover:bg-gray-700'
+            }`}
+          >
+            Announcements
           </Link>
           
           {/* Mobile Right Side - Date/Time and Login */}
@@ -374,75 +414,148 @@ const PublicLayout: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-yellow-900 text-white">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Quick Links */}
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Quick Links</h3>
-              <ul className="space-y-1">
-                <li><Link to="/" className="hover:text-yellow-200 text-xs">Home</Link></li>
-                <li><Link to="/resolutions" className="hover:text-yellow-200 text-xs">Resolutions</Link></li>
-                <li><Link to="/ordinances" className="hover:text-yellow-200 text-xs">Ordinances</Link></li>
-                <li><Link to="/procurements" className="hover:text-yellow-200 text-xs">Procurements</Link></li>
-                <li><Link to="/vacancies" className="hover:text-yellow-200 text-xs">Vacancies</Link></li>
-                <li><Link to="/announcements" className="hover:text-yellow-200 text-xs">Announcements</Link></li>
-              </ul>
+      <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white border-t border-gray-700">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          {/* Main Footer Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-yellow-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold">Contact Us</h3>
+              </div>
+              
+              <div className="space-y-3">
+                {systemSettings?.contactInfo?.mobileNumbers?.map((phone, index) => (
+                  <div key={index} className="flex items-center space-x-3 group">
+                    <div className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center group-hover:bg-yellow-600 transition-colors">
+                      <svg className="w-4 h-4 text-yellow-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium">{phone}</span>
+                  </div>
+                ))}
+                
+                <div className="flex items-center space-x-3 group">
+                  <div className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center group-hover:bg-yellow-600 transition-colors">
+                    <svg className="w-4 h-4 text-yellow-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">{systemSettings?.contactInfo?.email || 'info@sanfranciscosl.gov.ph'}</span>
+                </div>
+                
+                {systemSettings?.contactInfo?.facebook && (
+                  <div className="flex items-center space-x-3 group">
+                    <div className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+                      <svg className="w-4 h-4 text-yellow-400 group-hover:text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      </svg>
+                    </div>
+                    <a 
+                      href={systemSettings.contactInfo.facebook} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium hover:text-yellow-400 transition-colors"
+                    >
+                      Facebook Page
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Contact Information */}
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Contact Us</h3>
-              <div className="space-y-1">
-                {systemSettings?.contactInfo?.mobileNumbers?.map((phone, index) => (
-                  <p key={index} className="text-xs">📞 {phone}</p>
-                ))}
-                <p className="text-xs">📧 {systemSettings?.contactInfo?.email || 'info@sanfranciscosl.gov.ph'}</p>
-                <p className="text-xs">📍 {systemSettings?.contactInfo?.address || 'San Francisco, Southern Leyte'}</p>
+            {/* Address & Location */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-yellow-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold">Visit Us</h3>
+              </div>
+              
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-yellow-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed">
+                      {systemSettings?.contactInfo?.address || 'San Francisco, Southern Leyte'}
+                    </p>
+                  </div>
+                  
+                  {systemSettings?.mapLocation && (
+                    <div className="rounded-lg overflow-hidden border border-gray-600">
+                      <GoogleMap
+                        latitude={systemSettings.mapLocation.latitude}
+                        longitude={systemSettings.mapLocation.longitude}
+                        address={systemSettings.contactInfo?.address || systemSettings.mapLocation.address}
+                        height="180px"
+                        zoom={15}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Office Hours */}
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Office Hours</h3>
-              <div className="space-y-1">
-                <p className="text-xs">Monday: {systemSettings?.officeHours?.monday || '8:00 AM - 5:00 PM'}</p>
-                <p className="text-xs">Tuesday: {systemSettings?.officeHours?.tuesday || '8:00 AM - 5:00 PM'}</p>
-                <p className="text-xs">Wednesday: {systemSettings?.officeHours?.wednesday || '8:00 AM - 5:00 PM'}</p>
-                <p className="text-xs">Thursday: {systemSettings?.officeHours?.thursday || '8:00 AM - 5:00 PM'}</p>
-                <p className="text-xs">Friday: {systemSettings?.officeHours?.friday || '8:00 AM - 5:00 PM'}</p>
-                <p className="text-xs">Saturday: {systemSettings?.officeHours?.saturday || '8:00 AM - 12:00 PM'}</p>
-                <p className="text-xs">Sunday: {systemSettings?.officeHours?.sunday || 'Closed'}</p>
-              </div>
-            </div>
-
-            {/* Google Map */}
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Find Us</h3>
-              {systemSettings?.mapLocation ? (
-                <GoogleMap
-                  latitude={systemSettings.mapLocation.latitude}
-                  longitude={systemSettings.mapLocation.longitude}
-                  address={systemSettings.contactInfo?.address || systemSettings.mapLocation.address}
-                  height="200px"
-                  zoom={15}
-                />
-              ) : (
-                <div className="bg-gray-700 rounded p-4 text-center">
-                  <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-yellow-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-gray-400 text-xs">Map location not available</p>
                 </div>
-              )}
+                <h3 className="text-lg font-bold">Office Hours</h3>
+              </div>
+              
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-700">
+                    <span className="text-sm font-medium text-gray-300">Monday - Friday</span>
+                    <span className="text-sm font-bold text-yellow-400">{systemSettings?.officeHours?.monday || '8:00 AM - 5:00 PM'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-700">
+                    <span className="text-sm font-medium text-gray-300">Saturday</span>
+                    <span className="text-sm font-bold text-yellow-400">{systemSettings?.officeHours?.saturday || '8:00 AM - 12:00 PM'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm font-medium text-gray-300">Sunday</span>
+                    <span className="text-sm font-bold text-red-400">{systemSettings?.officeHours?.sunday || 'Closed'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-yellow-800 text-center">
-            <p className="text-xs">
-              {systemSettings?.copyrightText || `© ${new Date().getFullYear()} Sangguniang Bayan, San Francisco, Southern Leyte. All rights reserved.`}
-            </p>
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-700 pt-6">
+            <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+              <div className="flex items-center space-x-4">
+                <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-400">
+                  {systemSettings?.copyrightText || `© ${new Date().getFullYear()} Sangguniang Bayan, San Francisco, Southern Leyte. All rights reserved.`}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

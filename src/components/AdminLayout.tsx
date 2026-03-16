@@ -40,11 +40,11 @@ const AdminLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-56 bg-gray-900 transform transition-transform duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 lg:static lg:inset-0 flex-shrink-0`}>
-        <div className="flex items-center justify-between h-16 px-4 bg-gray-800 border-b border-gray-700">
-          <h2 className="text-white font-bold text-lg">Admin Portal</h2>
+        <div className="flex items-center justify-between h-14 px-3 bg-gray-800 border-b border-gray-700">
+          <h2 className="text-white font-bold text-base">Admin Portal</h2>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-400 hover:text-white transition-colors"
@@ -56,36 +56,36 @@ const AdminLayout: React.FC = () => {
         </div>
 
         {/* User Profile */}
-        <div className="p-4 border-b border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-yellow-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">
+        <div className="p-3 border-b border-gray-700">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-yellow-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-xs">
                 {user?.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
               </span>
             </div>
-            <div className="flex-1">
-              <p className="text-white font-medium text-sm">{user?.fullName}</p>
-              <p className="text-gray-400 text-xs">{user?.role}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-medium text-xs truncate">{user?.fullName}</p>
+              <p className="text-gray-400 text-xs truncate">{user?.role}</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="mt-4 px-2">
+        <nav className="mt-3 px-2">
           <ul className="space-y-1">
             {menuItems.map((item) => (
               <li key={item.name}>
                 <Link
                   to={item.path}
-                  className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  className={`flex items-center px-2 py-2 text-xs font-medium rounded-md transition-all duration-200 ${
                     isActivePath(item.path)
                       ? 'bg-yellow-600 text-white shadow-lg'
                       : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <span className="mr-3 text-lg">{item.icon}</span>
-                  {item.name}
+                  <span className="mr-2 text-sm">{item.icon}</span>
+                  <span className="truncate">{item.name}</span>
                 </Link>
               </li>
             ))}
@@ -93,12 +93,12 @@ const AdminLayout: React.FC = () => {
         </nav>
 
         {/* Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="absolute bottom-0 left-0 right-0 p-3">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center px-3 py-3 text-sm font-medium text-gray-300 rounded-lg hover:bg-red-600 hover:text-white transition-all duration-200"
+            className="w-full flex items-center px-2 py-2 text-xs font-medium text-gray-300 rounded-md hover:bg-red-600 hover:text-white transition-all duration-200"
           >
-            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             Logout

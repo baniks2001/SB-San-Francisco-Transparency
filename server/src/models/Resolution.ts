@@ -6,8 +6,8 @@ export interface IResolution extends Document {
   title?: string;
   content: string;
   secondContent?: string;
-  present?: Array<{name: string, position: string}>;
-  absent?: Array<{name: string, position: string}>;
+  present?: Array<{name: string, position: string, position2?: string}>;
+  absent?: Array<{name: string, position: string, position2?: string}>;
   templateId?: mongoose.Types.ObjectId;
   status: 'Draft' | 'Pending' | 'Approved';
   isPublic: boolean;
@@ -129,11 +129,13 @@ const resolutionSchema = new Schema<IResolution>({
   },
   present: [{
     name: { type: String, required: true },
-    position: { type: String, required: true }
+    position: { type: String, required: true },
+    position2: { type: String }
   }],
   absent: [{
     name: { type: String, required: true },
-    position: { type: String, required: true }
+    position: { type: String, required: true },
+    position2: { type: String }
   }],
   templateId: {
     type: Schema.Types.ObjectId,
@@ -194,5 +196,17 @@ const resolutionSchema = new Schema<IResolution>({
 }, {
   timestamps: true
 });
+
+// Create indexes for optimal performance
+resolutionSchema.index({ resolutionNumber: 1, series: 1 }, { unique: true });
+resolutionSchema.index({ status: 1 });
+resolutionSchema.index({ isPublic: 1 });
+resolutionSchema.index({ dateIntroduced: -1 });
+resolutionSchema.index({ dateApproved: -1 });
+resolutionSchema.index({ author: 1 });
+resolutionSchema.index({ templateId: 1 });
+resolutionSchema.index({ status: 1, isPublic: 1 });
+resolutionSchema.index({ title: 'text', content: 'text' });
+resolutionSchema.index({ createdAt: -1 });
 
 export default mongoose.model<IResolution>('Resolution', resolutionSchema);

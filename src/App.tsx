@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PublicLayout from './components/PublicLayout';
 import AdminLayout from './components/AdminLayout';
-import NetworkInfo from './components/NetworkInfo';
 import Home from './pages/Home';
+import AboutPage from './pages/AboutPage';
 import Resolutions from './pages/Resolutions';
 import Ordinances from './pages/Ordinances';
 import Procurements from './pages/Procurements';
@@ -22,7 +22,7 @@ import AdminAnnouncements from './pages/admin/Announcements';
 import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
 import AdminTemplates from './pages/admin/Templates';
-import AdminHomeContent from './pages/admin/HomeContent';
+import AdminHomeContent from './pages/admin/HomeandAboutContent';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
@@ -41,6 +41,7 @@ function AppContent() {
         {/* Public Routes */}
         <Route path="/" element={<PublicLayout />}>
           <Route index element={<Home />} />
+          <Route path="about" element={<AboutPage />} />
           <Route path="resolutions" element={<Resolutions />} />
           <Route path="ordinances" element={<Ordinances />} />
           <Route path="procurements" element={<Procurements />} />
@@ -71,9 +72,6 @@ function AppContent() {
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      
-      {/* Network Info Component - Only in development */}
-      {process.env.NODE_ENV === 'development' && <NetworkInfo />}
     </Router>
   );
 }

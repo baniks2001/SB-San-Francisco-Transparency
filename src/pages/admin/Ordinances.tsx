@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Ordinance, ResolutionTemplate } from '../../types';
 import api from '../../services/api';
-import { getImageUrl } from '../../utils/imageUtils';
+import { getImageUrl, getLogoUrl } from '../../utils/imageUtils';
+import NotificationModal from '../../components/NotificationModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const AdminOrdinances: React.FC = () => {
   const [ordinances, setOrdinances] = useState<Ordinance[]>([]);
@@ -24,6 +26,16 @@ const AdminOrdinances: React.FC = () => {
       alignment: 'Left' | 'Center' | 'Right' | 'Justify';
       isBold?: boolean;
       isUnderline?: boolean;
+    }>,
+    attestedBy: [] as Array<{
+      name: string;
+      position: string;
+      optionalText?: string;
+      alignment?: 'Left' | 'Center' | 'Right' | 'Justify';
+      isBold?: boolean;
+      isUnderline?: boolean;
+      fontSize?: number;
+      fontFamily?: string;
     }>,
     // Text formatting options for each field
     ordinanceNumberFormat: {
@@ -67,11 +79,32 @@ const AdminOrdinances: React.FC = () => {
       isBold: false,
       isUnderline: false,
       alignment: 'Justify' as 'Left' | 'Center' | 'Right' | 'Justify'
+    },
+    attestedByFormat: {
+      fontSize: 14,
+      fontFamily: 'Arial',
+      isBold: false,
+      isUnderline: false,
+      alignment: 'Left' as 'Left' | 'Center' | 'Right' | 'Justify'
     }
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     fetchOrdinances();
@@ -94,6 +127,26 @@ const AdminOrdinances: React.FC = () => {
     } catch (err) {
       console.error('Failed to fetch templates:', err);
     }
+  };
+
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,22 +185,31 @@ const AdminOrdinances: React.FC = () => {
 
       fetchOrdinances();
       closeModal();
+      showNotification('Success', editingOrdinance ? 'Ordinance updated successfully!' : 'Ordinance created successfully!', 'success');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save ordinance');
+      showNotification('Error', err.response?.data?.message || 'Failed to save ordinance', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this ordinance?')) return;
-
-    try {
-      await api.delete(`/ordinances/${id}`);
-      fetchOrdinances();
-    } catch (err) {
-      setError('Failed to delete ordinance');
-    }
+    showConfirmation(
+      'Delete Ordinance',
+      'Are you sure you want to delete this ordinance? This action cannot be undone.',
+      async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await api.delete(`/ordinances/${id}`);
+          showNotification('Success', 'Ordinance deleted successfully!', 'success');
+          fetchOrdinances();
+        } catch (err: any) {
+          showNotification('Error', err.response?.data?.message || 'Failed to delete ordinance', 'error');
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false, isOpen: false }));
+        }
+      }
+    );
   };
 
   const openModal = (ordinance?: Ordinance) => {
@@ -205,6 +267,14 @@ const AdminOrdinances: React.FC = () => {
           isBold: false,
           isUnderline: false,
           alignment: 'Justify'
+        },
+        attestedBy: (ordinance as any).attestedBy || [],
+        attestedByFormat: {
+          fontSize: 14,
+          fontFamily: 'Arial',
+          isBold: false,
+          isUnderline: false,
+          alignment: 'Left'
         }
       });
     } else {
@@ -261,6 +331,14 @@ const AdminOrdinances: React.FC = () => {
           isBold: false,
           isUnderline: false,
           alignment: 'Justify'
+        },
+        attestedBy: [],
+        attestedByFormat: {
+          fontSize: 14,
+          fontFamily: 'Arial',
+          isBold: false,
+          isUnderline: false,
+          alignment: 'Left'
         }
       });
     }
@@ -283,6 +361,7 @@ const AdminOrdinances: React.FC = () => {
       isPublic: false,
       templateId: '',
       signatories: [],
+      attestedBy: [],
       ordinanceNumberFormat: {
         fontSize: 20,
         fontFamily: 'Arial',
@@ -324,10 +403,47 @@ const AdminOrdinances: React.FC = () => {
         isBold: false,
         isUnderline: false,
         alignment: 'Justify'
+      },
+      attestedByFormat: {
+        fontSize: 14,
+        fontFamily: 'Arial',
+        isBold: false,
+        isUnderline: false,
+        alignment: 'Left'
       }
     });
     setSelectedFile(null);
     setError('');
+  };
+
+  const addAttestedBy = () => {
+    const newAttestedBy = {
+      name: '',
+      position: '',
+      optionalText: '',
+      alignment: 'Left' as const,
+      isBold: false,
+      isUnderline: true,
+      fontSize: 14,
+      fontFamily: 'Arial'
+    };
+    setFormData({
+      ...formData,
+      attestedBy: [...formData.attestedBy, newAttestedBy]
+    });
+  };
+
+  const updateAttestedBy = (index: number, field: string, value: any) => {
+    const newAttestedBy = [...formData.attestedBy];
+    newAttestedBy[index] = { ...newAttestedBy[index], [field]: value };
+    setFormData({ ...formData, attestedBy: newAttestedBy });
+  };
+
+  const removeAttestedBy = (index: number) => {
+    setFormData({
+      ...formData,
+      attestedBy: formData.attestedBy.filter((_, i) => i !== index)
+    });
   };
 
   const addSignatory = () => {
@@ -370,96 +486,151 @@ const AdminOrdinances: React.FC = () => {
     }
     
     return (
-      <div className="bg-white p-8" style={{ minHeight: '600px' }}>
+      <div className="bg-white p-8" style={{ minHeight: '600px', backgroundColor: '#ffffff !important' }}>
+        <style>{`
+          .bg-white { background-color: #ffffff !important; }
+          * { background-color: transparent !important; }
+        `}</style>
         {/* Header with logos and texts */}
-        {selectedTemplate.header?.logos && selectedTemplate.header.logos.length > 0 && (
-          <div className="flex justify-center mb-4">
-            {selectedTemplate.header.logos.map((logo) => (
-              <img key={logo.id} src={logo.url} alt="Logo" className="h-12 mx-2" />
-            ))}
-          </div>
-        )}
-        
-        {selectedTemplate.header?.texts?.map((text, index) => (
-          <div 
-            key={text.id} 
-            className="mb-2"
-            style={{
-              fontSize: `${text.fontSize}px`,
-              fontFamily: text.fontFamily,
-              color: text.fontColor || '#000000',
-              textAlign: text.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
-              fontWeight: text.isBold ? 'bold' : 'normal',
-              fontStyle: text.isItalic ? 'italic' : 'normal',
-              textDecoration: text.isUnderline ? 'underline' : 'none'
-            }}
-          >
-            {text.text}
-          </div>
-        ))}
+        <div style={{ backgroundColor: '#ffffff' }}>
+          {selectedTemplate.header?.logos && selectedTemplate.header.logos.length > 0 && (
+            <div className="flex justify-center mb-4">
+              {selectedTemplate.header.logos.map((logo) => (
+                logo.url && (
+                  <img 
+                    key={logo.id} 
+                    src={getLogoUrl(logo.url)} 
+                    alt="Logo" 
+                    className="h-12 mx-2" 
+                    onError={(e) => {
+                      console.log('Logo failed to load:', logo.url);
+                      e.currentTarget.style.display = 'none';
+                    }} 
+                  />
+                )
+              ))}
+            </div>
+          )}
+          
+          {selectedTemplate.header?.texts?.map((text, index) => (
+            <div 
+              key={text.id} 
+              className="mb-2"
+              style={{
+                fontSize: `${text.fontSize}px`,
+                fontFamily: text.fontFamily,
+                color: text.fontColor || '#000000',
+                textAlign: text.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                fontWeight: text.isBold ? 'bold' : 'normal',
+                fontStyle: text.isItalic ? 'italic' : 'normal',
+                textDecoration: text.isUnderline ? 'underline' : 'none',
+                backgroundColor: '#ffffff'
+              }}
+            >
+              {text.text}
+            </div>
+          ))}
+        </div>
         
         {/* Ordinance Title */}
         {formData.title && (
-          <div className="text-center my-6">
+          <div className="text-center my-6" style={{ backgroundColor: '#ffffff' }}>
             <h2 
-              className="text-xl font-bold"
+              className="text-xl font-bold text-gray-800"
               style={{ textDecoration: 'underline' }}
             >
               ORDINANCE NO. {formData.ordinanceNumber}
             </h2>
-            <h3 className="text-lg mt-2">Series: {formData.series}</h3>
-            <h4 className="text-lg mt-2 font-semibold">{formData.title}</h4>
+            <h3 className="text-lg mt-2 text-gray-800">Series: {formData.series}</h3>
+            <h4 className="text-lg mt-2 font-semibold text-gray-800">{formData.title}</h4>
           </div>
         )}
         
         {/* Content */}
         {formData.content && (
-          <div className="my-6 whitespace-pre-wrap" style={{ textAlign: 'justify' }}>
+          <div className="my-6 whitespace-pre-wrap text-gray-800" style={{ textAlign: 'justify', backgroundColor: '#ffffff' }}>
             {formData.content}
           </div>
         )}
         
         {/* Signatories */}
         {formData.signatories.length > 0 && (
-          <div className="mt-8">
+          <div className="mt-8" style={{ backgroundColor: '#ffffff' }}>
             {formData.signatories.map((signatory, index) => (
               <div 
                 key={index}
                 className="mb-4"
-                style={{ textAlign: signatory.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify' }}
+                style={{ textAlign: signatory.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify', backgroundColor: '#ffffff' }}
               >
                 <div 
+                  className="text-gray-800"
                   style={{
                     fontWeight: signatory.isBold ? 'bold' : 'normal',
-                    textDecoration: signatory.isUnderline ? 'underline' : 'none'
+                    textDecoration: signatory.isUnderline ? 'underline' : 'none',
+                    backgroundColor: '#ffffff'
                   }}
                 >
                   {signatory.name}
                 </div>
-                <div className="text-sm">{signatory.position}</div>
+                <div className="text-sm text-gray-800" style={{ backgroundColor: '#ffffff' }}>{signatory.position}</div>
               </div>
             ))}
           </div>
         )}
         
         {/* Footer */}
-        {selectedTemplate.footer?.texts?.map((text) => (
-          <div 
-            key={text.id} 
-            className="mt-8"
-            style={{
-              fontSize: `${text.fontSize}px`,
-              fontFamily: text.fontFamily,
-              color: text.fontColor || '#000000',
-              textAlign: text.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
-              fontWeight: text.isBold ? 'bold' : 'normal',
-              fontStyle: text.isItalic ? 'italic' : 'normal',
-              textDecoration: text.isUnderline ? 'underline' : 'none'
-            }}
-          >
-            {text.text}
+        <div style={{ backgroundColor: '#ffffff' }}>
+          {selectedTemplate.footer?.texts?.map((text) => (
+            <div 
+              key={text.id} 
+              className="mt-8"
+              style={{
+                fontSize: `${text.fontSize}px`,
+                fontFamily: text.fontFamily,
+                color: text.fontColor || '#000000',
+                textAlign: text.alignment.toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                fontWeight: text.isBold ? 'bold' : 'normal',
+                fontStyle: text.isItalic ? 'italic' : 'normal',
+                textDecoration: text.isUnderline ? 'underline' : 'none',
+                backgroundColor: '#ffffff'
+              }}
+            >
+              {text.text}
+            </div>
+          ))}
+        </div>
+
+        {/* Attested By */}
+        {formData.attestedBy && formData.attestedBy.length > 0 && (
+          <div style={{ marginTop: '15px', backgroundColor: '#ffffff' }}>
+            <div style={{ textAlign: 'left', fontWeight: 'bold', fontSize: '14px', marginBottom: '10px', backgroundColor: '#ffffff' }}>
+              ATTESTED BY:
+            </div>
+            {formData.attestedBy.map((attested, index) => (
+              <div 
+                key={index}
+                style={{ 
+                  textAlign: (attested.alignment || formData.attestedByFormat.alignment).toLowerCase() as 'left' | 'center' | 'right' | 'justify',
+                  fontSize: `${attested.fontSize || formData.attestedByFormat.fontSize}px`,
+                  fontFamily: attested.fontFamily || formData.attestedByFormat.fontFamily,
+                  fontWeight: attested.isBold || formData.attestedByFormat.isBold ? 'bold' : 'normal',
+                  textDecoration: attested.isUnderline || formData.attestedByFormat.isUnderline ? 'underline' : 'none',
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  marginBottom: '5px'
+                }}
+              >
+                <div style={{ fontWeight: attested.isBold || formData.attestedByFormat.isBold ? 'bold' : 'normal', textDecoration: attested.isUnderline || formData.attestedByFormat.isUnderline ? 'underline' : 'none' }}>
+                  {attested.name}
+                </div>
+                <div style={{ fontSize: '14px', color: '#000000' }}>{attested.position}</div>
+                {attested.optionalText && (
+                  <div style={{ fontSize: '12px', marginTop: '2px', color: '#000000' }}>{attested.optionalText}</div>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     );
   };
@@ -482,12 +653,7 @@ const AdminOrdinances: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-900 border border-red-700 rounded-lg p-4">
-          <p className="text-red-200">{error}</p>
-        </div>
-      )}
-
+      
       {/* Ordinances Table */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
         {/* Mobile Card View */}
@@ -862,6 +1028,176 @@ const AdminOrdinances: React.FC = () => {
                 </div>
               </div>
 
+              {/* Attested By Section */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-semibold text-white">Attested By</h4>
+                  <button
+                    type="button"
+                    onClick={addAttestedBy}
+                    className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700"
+                  >
+                    Add Attested By
+                  </button>
+                </div>
+                
+                {/* Global Attested By Formatting Controls */}
+                <div className="mb-4 p-3 border-2 border-gray-600 rounded-lg bg-gray-800">
+                  <h5 className="text-sm font-medium text-white mb-2">Attested By Formatting</h5>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <select
+                      value={formData.attestedByFormat.alignment}
+                      onChange={(e) => setFormData({...formData, attestedByFormat: {...formData.attestedByFormat, alignment: e.target.value as any}})}
+                      className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                    >
+                      <option value="Left">Left</option>
+                      <option value="Center">Center</option>
+                      <option value="Right">Right</option>
+                      <option value="Justify">Justify</option>
+                    </select>
+                    
+                    <input
+                      type="number"
+                      value={formData.attestedByFormat.fontSize}
+                      onChange={(e) => setFormData({...formData, attestedByFormat: {...formData.attestedByFormat, fontSize: parseInt(e.target.value) || 12}})}
+                      className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                      placeholder="Size"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, attestedByFormat: {...formData.attestedByFormat, isBold: !formData.attestedByFormat.isBold}})}
+                      className={`px-2 py-1 rounded text-sm ${formData.attestedByFormat.isBold ? 'bg-yellow-600' : 'bg-gray-600'} text-white font-bold`}
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, attestedByFormat: {...formData.attestedByFormat, isUnderline: !formData.attestedByFormat.isUnderline}})}
+                      className={`px-2 py-1 rounded text-sm ${formData.attestedByFormat.isUnderline ? 'bg-yellow-600' : 'bg-gray-600'} text-white underline`}
+                    >
+                      U
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Individual Attested By Entries */}
+                {formData.attestedBy.map((attested, index) => (
+                  <div key={index} className="mb-4 p-4 border-2 border-gray-600 rounded-lg bg-gray-800">
+                    <div className="flex justify-between items-start mb-3">
+                      <h5 className="text-sm font-medium text-white">Attested By #{index + 1}</h5>
+                      {formData.attestedBy.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAttestedBy(index)}
+                          className="text-red-400 hover:text-red-300 text-sm"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-1">Name</label>
+                        <input
+                          type="text"
+                          value={attested.name}
+                          onChange={(e) => updateAttestedBy(index, 'name', e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          placeholder="Enter name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-1">Position</label>
+                        <input
+                          type="text"
+                          value={attested.position}
+                          onChange={(e) => updateAttestedBy(index, 'position', e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          placeholder="Enter position"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-white mb-1">Optional Text</label>
+                      <input
+                        type="text"
+                        value={attested.optionalText || ''}
+                        onChange={(e) => updateAttestedBy(index, 'optionalText', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        placeholder="Optional additional text"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-1">Alignment</label>
+                        <select
+                          value={attested.alignment || 'Left'}
+                          onChange={(e) => updateAttestedBy(index, 'alignment', e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        >
+                          <option value="Left">Left</option>
+                          <option value="Center">Center</option>
+                          <option value="Right">Right</option>
+                          <option value="Justify">Justify</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-1">Font Size</label>
+                        <input
+                          type="number"
+                          value={attested.fontSize || 14}
+                          onChange={(e) => updateAttestedBy(index, 'fontSize', parseInt(e.target.value) || 14)}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                          placeholder="Size"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-1">Font Family</label>
+                        <select
+                          value={attested.fontFamily || 'Arial'}
+                          onChange={(e) => updateAttestedBy(index, 'fontFamily', e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                        >
+                          <option value="Arial">Arial</option>
+                          <option value="Times New Roman">Times New Roman</option>
+                          <option value="Calibri">Calibri</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end space-x-2">
+                        <label className="flex items-center text-white">
+                          <input
+                            type="checkbox"
+                            checked={attested.isBold || false}
+                            onChange={(e) => updateAttestedBy(index, 'isBold', e.target.checked)}
+                            className="mr-2"
+                          />
+                          Bold
+                        </label>
+                        
+                        <label className="flex items-center text-white">
+                          <input
+                            type="checkbox"
+                            checked={attested.isUnderline || false}
+                            onChange={(e) => updateAttestedBy(index, 'isUnderline', e.target.checked)}
+                            className="mr-2"
+                          />
+                          Underline
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {formData.attestedBy.length === 0 && (
+                  <div className="bg-gray-800 rounded-lg p-8 text-center">
+                    <p className="text-gray-400">No attested by signatories added. Click "Add Attested By" to add one.</p>
+                  </div>
+                )}
+              </div>
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-white mb-1">
                   Upload PDF Document
@@ -908,7 +1244,7 @@ const AdminOrdinances: React.FC = () => {
               {/* Preview Section */}
               <div className="bg-white rounded-lg p-6 overflow-y-auto max-h-[70vh]">
                 <h4 className="text-lg font-semibold text-gray-800 mb-4">Document Preview</h4>
-                <div className="border border-gray-300 rounded p-4 bg-gray-50" style={{ minHeight: '600px' }}>
+                <div className="border border-gray-300 rounded p-4 bg-white" style={{ minHeight: '600px' }}>
                   {renderOrdinancePreview()}
                 </div>
               </div>
@@ -916,6 +1252,26 @@ const AdminOrdinances: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

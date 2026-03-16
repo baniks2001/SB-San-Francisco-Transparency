@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { getApiBaseUrl as getDynamicApiUrl } from '../utils/networkUtils';
 
 // Retry utility function
 const retryRequest = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
@@ -15,13 +14,24 @@ const retryRequest = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000):
   }
 };
 
-// Dynamic API URL detection
+// API URL with network support and fallback
 const getApiBaseUrl = () => {
-  // Use the dynamic IP detection utility
-  return getDynamicApiUrl();
+  // Try network URL first, fallback to localhost
+  const networkUrl = process.env.REACT_APP_NETWORK_API_URL;
+  const localUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  
+  // For development, try network first, then localhost
+  if (process.env.NODE_ENV === 'development') {
+    return networkUrl || localUrl;
+  }
+  
+  return localUrl;
 };
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || getApiBaseUrl();
+const API_BASE_URL = getApiBaseUrl();
+
+console.log('🌐 API Base URL:', API_BASE_URL);
+console.log('📱 Network IP:', process.env.NETWORK_IP);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -57,16 +67,16 @@ api.interceptors.response.use(
 
 // Wrapper methods with retry logic
 export const apiWithRetry = {
-  get: <T>(url: string, config?: any) => {
+  get: (url: string, config?: any) => {
     return retryRequest(() => api.get(url, config));
   },
-  post: <T>(url: string, data?: any, config?: any) => {
+  post: (url: string, data?: any, config?: any) => {
     return retryRequest(() => api.post(url, data, config));
   },
-  put: <T>(url: string, data?: any, config?: any) => {
+  put: (url: string, data?: any, config?: any) => {
     return retryRequest(() => api.put(url, data, config));
   },
-  delete: <T>(url: string, config?: any) => {
+  delete: (url: string, config?: any) => {
     return retryRequest(() => api.delete(url, config));
   }
 };

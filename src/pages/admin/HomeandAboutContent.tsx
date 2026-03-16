@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { SystemSettings } from '../../types';
+import NotificationModal from '../../components/NotificationModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
+import { SystemSettings, Activity } from '../../types';
 import { getImageUrl } from '../../utils/imageUtils';
 
 const AdminHomeContent: React.FC = () => {
@@ -16,10 +18,78 @@ const AdminHomeContent: React.FC = () => {
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const [sealTitle, setSealTitle] = useState('');
   const [sealDescription, setSealDescription] = useState('');
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [activityForm, setActivityForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    location: '',
+    type: 'meeting' as 'meeting' | 'event' | 'hearing' | 'ceremony' | 'other',
+    status: 'upcoming' as 'upcoming' | 'ongoing' | 'completed' | 'cancelled',
+    organizer: '',
+    contactInfo: '',
+    isPublic: true
+  });
+  
+  // Contact information state
+  const [contactInfo, setContactInfo] = useState({
+    mobileNumbers: [''],
+    email: '',
+    address: '',
+    facebook: ''
+  });
+
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
+
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
 
   useEffect(() => {
     fetchSettings();
+    fetchActivities();
   }, []);
+
+  const fetchActivities = async () => {
+    try {
+      const response = await api.get('/activities');
+      setActivities(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch activities:', error);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -27,6 +97,16 @@ const AdminHomeContent: React.FC = () => {
       setSettings(response.data);
       setProjectImages(response.data.projectImages || []);
       setOrganizationStructure(response.data.organizationStructure || []);
+      
+      // Initialize contact info
+      if (response.data.contactInfo) {
+        setContactInfo({
+          mobileNumbers: response.data.contactInfo.mobileNumbers || [''],
+          email: response.data.contactInfo.email || '',
+          address: response.data.contactInfo.address || '',
+          facebook: response.data.contactInfo.facebook || ''
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
     } finally {
@@ -50,9 +130,141 @@ const AdminHomeContent: React.FC = () => {
     } else if (field === 'officialSeal') {
       setSealTitle(settings?.officialSeal?.title || '');
       setSealDescription(settings?.officialSeal?.description || '');
+    } else if (field === 'contactInfo') {
+      // Contact info is already initialized in state
     }
     
     setIsModalOpen(true);
+  };
+
+  const handleContactInfoUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      await api.put('/settings', {
+        contactInfo: {
+          mobileNumbers: contactInfo.mobileNumbers.filter(num => num.trim() !== ''),
+          email: contactInfo.email,
+          address: contactInfo.address,
+          facebook: contactInfo.facebook
+        }
+      });
+      
+      await fetchSettings();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to update contact info:', error);
+    }
+  };
+
+  const addMobileNumber = () => {
+    setContactInfo(prev => ({
+      ...prev,
+      mobileNumbers: [...prev.mobileNumbers, '']
+    }));
+  };
+
+  // Activity management functions
+  const openActivityModal = (activity?: Activity) => {
+    if (activity) {
+      setEditingActivity(activity);
+      setActivityForm({
+        title: activity.title,
+        description: activity.description,
+        date: activity.date,
+        time: activity.time,
+        location: activity.location,
+        type: activity.type,
+        status: activity.status,
+        organizer: activity.organizer,
+        contactInfo: activity.contactInfo || '',
+        isPublic: activity.isPublic
+      });
+    } else {
+      setEditingActivity(null);
+      setActivityForm({
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        location: '',
+        type: 'meeting',
+        status: 'upcoming',
+        organizer: '',
+        contactInfo: '',
+        isPublic: true
+      });
+    }
+    setIsActivityModalOpen(true);
+  };
+
+  const editActivity = (activity: Activity) => {
+    openActivityModal(activity);
+  };
+
+  const handleActivitySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (editingActivity) {
+        // Update existing activity
+        await api.put(`/activities/${editingActivity._id}`, activityForm);
+      } else {
+        // Create new activity
+        await api.post('/activities', activityForm);
+      }
+      
+      await fetchActivities();
+      setIsActivityModalOpen(false);
+      setEditingActivity(null);
+      setActivityForm({
+        title: '',
+        description: '',
+        date: '',
+        time: '',
+        location: '',
+        type: 'meeting',
+        status: 'upcoming',
+        organizer: '',
+        contactInfo: '',
+        isPublic: true
+      });
+    } catch (error) {
+      console.error('Failed to save activity:', error);
+    }
+  };
+
+  const deleteActivity = async (id: string) => {
+    showConfirmation(
+      'Delete Activity',
+      'Are you sure you want to delete this activity? This action cannot be undone.',
+      async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await api.delete(`/activities/${id}`);
+          showNotification('Success', 'Activity deleted successfully!', 'success');
+          await fetchActivities();
+        } catch (error: any) {
+          showNotification('Error', error.response?.data?.message || 'Failed to delete activity', 'error');
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false, isOpen: false }));
+        }
+      }
+    );
+  };
+
+  const removeMobileNumber = (index: number) => {
+    setContactInfo(prev => ({
+      ...prev,
+      mobileNumbers: prev.mobileNumbers.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateMobileNumber = (index: number, value: string) => {
+    setContactInfo(prev => ({
+      ...prev,
+      mobileNumbers: prev.mobileNumbers.map((num, i) => i === index ? value : num)
+    }));
   };
 
   const handleTextEdit = async (e: React.FormEvent) => {
@@ -136,21 +348,36 @@ const AdminHomeContent: React.FC = () => {
       const projectName = (document.getElementById('projectName') as HTMLInputElement)?.value;
       const projectDetails = (document.getElementById('projectDetails') as HTMLTextAreaElement)?.value;
       
+      // Validate required fields
+      if (!projectName || !projectDetails) {
+        showNotification('Validation Error', 'Please fill in both project name and details', 'warning');
+        return;
+      }
+      
+      formData.append('projectName', projectName);
+      formData.append('details', projectDetails);
+      
       if (selectedFiles.length > 0) {
         formData.append('file', selectedFiles[0]);
-        formData.append('projectName', projectName);
-        formData.append('details', projectDetails);
-        
-        await api.post('/settings/projects', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        
-        await fetchSettings();
-        setIsModalOpen(false);
-        setSelectedFiles([]);
       }
+      
+      await api.post('/settings/projects', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      await fetchSettings();
+      setIsModalOpen(false);
+      setSelectedFiles([]);
+      
+      // Clear form fields
+      const projectNameInput = document.getElementById('projectName') as HTMLInputElement;
+      const projectDetailsInput = document.getElementById('projectDetails') as HTMLTextAreaElement;
+      if (projectNameInput) projectNameInput.value = '';
+      if (projectDetailsInput) projectDetailsInput.value = '';
+      
     } catch (error) {
       console.error('Failed to add project image:', error);
+      showNotification('Error', 'Failed to add project. Please try again.', 'error');
     }
   };
 
@@ -351,6 +578,149 @@ const AdminHomeContent: React.FC = () => {
           <div className="p-6">
             <p className="text-white">{settings?.keyResponsibilities || 'No key responsibilities defined'}</p>
           </div>
+        </div>
+      </div>
+
+      {/* Contact Information */}
+      <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-white">Contact Information</h2>
+          <button
+            onClick={() => openModal('contactInfo')}
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            Edit
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-400 mb-2">Mobile Numbers</h3>
+              <div className="space-y-1">
+                {settings?.contactInfo?.mobileNumbers?.map((phone, index) => (
+                  <p key={index} className="text-white">📞 {phone}</p>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-400 mb-2">Email</h3>
+              <p className="text-white">📧 {settings?.contactInfo?.email || 'No email set'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-400 mb-2">Address</h3>
+              <p className="text-white">📍 {settings?.contactInfo?.address || 'No address set'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-400 mb-2">Facebook</h3>
+              {settings?.contactInfo?.facebook ? (
+                <a 
+                  href={settings.contactInfo.facebook} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 flex items-center"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  Facebook Page
+                </a>
+              ) : (
+                <p className="text-gray-400">No Facebook link set</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Calendar of Activities */}
+      <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-white">Calendar of Activities</h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => openActivityModal()}
+              className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+            >
+              Add Activity
+            </button>
+          </div>
+        </div>
+        <div className="p-6">
+          {activities.length > 0 ? (
+            <div className="space-y-4">
+              {activities.map((activity) => (
+                <div key={activity._id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-white mb-2">{activity.title}</h3>
+                      <p className="text-gray-300 text-sm mb-3">{activity.description}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                        <div className="flex items-center text-gray-400">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {new Date(activity.date).toLocaleDateString()}
+                        </div>
+                        <div className="flex items-center text-gray-400">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {activity.time}
+                        </div>
+                        <div className="flex items-center text-gray-400">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {activity.location}
+                        </div>
+                        <div className="flex items-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            activity.status === 'upcoming' ? 'bg-blue-100 text-blue-800' :
+                            activity.status === 'ongoing' ? 'bg-green-100 text-green-800' :
+                            activity.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 text-sm text-gray-400">
+                        <span className="font-medium">Organizer:</span> {activity.organizer}
+                        {activity.contactInfo && (
+                          <span className="ml-4">
+                            <span className="font-medium">Contact:</span> {activity.contactInfo}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex space-x-2 ml-4">
+                      <button
+                        onClick={() => editActivity(activity)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteActivity(activity._id)}
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-gray-400 text-lg">No activities scheduled</p>
+              <p className="text-gray-500 text-sm mt-2">Add your first activity to get started</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -583,6 +953,7 @@ const AdminHomeContent: React.FC = () => {
               {modalField === 'organizationStructure' && 'Add Staff Member'}
               {modalField === 'editProject' && 'Edit Project/Activity'}
               {modalField === 'editStaff' && 'Edit Staff Member'}
+              {modalField === 'contactInfo' && 'Edit Contact Information'}
             </h3>
             
             <form onSubmit={
@@ -592,6 +963,7 @@ const AdminHomeContent: React.FC = () => {
               modalField === 'editProject' ? handleProjectEdit :
               modalField === 'editStaff' ? handleStaffEdit :
               modalField === 'officialSeal' ? handleSealUpload :
+              modalField === 'contactInfo' ? handleContactInfoUpdate :
               handleImageUpload
             }>
               {(modalField === 'editProject' || modalField === 'editStaff') && (
@@ -757,8 +1129,79 @@ const AdminHomeContent: React.FC = () => {
                 </>
               )}
               
+              {/* Contact Information Fields */}
+              {modalField === 'contactInfo' && (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-white mb-2">Mobile Numbers</label>
+                    {contactInfo.mobileNumbers.map((phone, index) => (
+                      <div key={index} className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => updateMobileNumber(index, e.target.value)}
+                          placeholder="Enter mobile number"
+                          className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        />
+                        {contactInfo.mobileNumbers.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeMobileNumber(index)}
+                            className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addMobileNumber}
+                      className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Add Mobile Number
+                    </button>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-white mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={contactInfo.email}
+                      onChange={(e) => setContactInfo(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Enter email address"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-white mb-1">Address</label>
+                    <textarea
+                      value={contactInfo.address}
+                      onChange={(e) => setContactInfo(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Enter office address"
+                      rows={3}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-white mb-1">Facebook URL</label>
+                    <input
+                      type="url"
+                      value={contactInfo.facebook}
+                      onChange={(e) => setContactInfo(prev => ({ ...prev, facebook: e.target.value }))}
+                      placeholder="Enter Facebook page URL (optional)"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                </>
+              )}
+              
               {/* Image Upload Section - Only for fields that need images */}
-              {!['aboutOffice', 'mission', 'vision', 'keyResponsibilities'].includes(modalField) && (
+              {!['aboutOffice', 'mission', 'vision', 'keyResponsibilities', 'contactInfo'].includes(modalField) && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-white mb-1">
                     {modalField === 'carouselImages' ? 'Images' : 'Image'}
@@ -804,6 +1247,200 @@ const AdminHomeContent: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Activity Modal */}
+      {isActivityModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">
+                  {editingActivity ? 'Edit Activity' : 'Add New Activity'}
+                </h3>
+                <button
+                  onClick={() => setIsActivityModalOpen(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleActivitySubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Activity Title *</label>
+                    <input
+                      type="text"
+                      value={activityForm.title}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Enter activity title"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Activity Type *</label>
+                    <select
+                      value={activityForm.type}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, type: e.target.value as any }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    >
+                      <option value="meeting">Meeting</option>
+                      <option value="event">Event</option>
+                      <option value="hearing">Hearing</option>
+                      <option value="ceremony">Ceremony</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Description *</label>
+                  <textarea
+                    value={activityForm.description}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Enter activity description"
+                    rows={3}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Date *</label>
+                    <input
+                      type="date"
+                      value={activityForm.date}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, date: e.target.value }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Time *</label>
+                    <input
+                      type="time"
+                      value={activityForm.time}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, time: e.target.value }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Location *</label>
+                  <input
+                    type="text"
+                    value={activityForm.location}
+                    onChange={(e) => setActivityForm(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Enter activity location"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Organizer *</label>
+                    <input
+                      type="text"
+                      value={activityForm.organizer}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, organizer: e.target.value }))}
+                      placeholder="Enter organizer name"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Contact Information</label>
+                    <input
+                      type="text"
+                      value={activityForm.contactInfo}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, contactInfo: e.target.value }))}
+                      placeholder="Phone number or email"
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Status *</label>
+                    <select
+                      value={activityForm.status}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, status: e.target.value as any }))}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    >
+                      <option value="upcoming">Upcoming</option>
+                      <option value="ongoing">Ongoing</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isPublic"
+                      checked={activityForm.isPublic}
+                      onChange={(e) => setActivityForm(prev => ({ ...prev, isPublic: e.target.checked }))}
+                      className="w-4 h-4 text-yellow-600 bg-gray-800 border-gray-600 rounded focus:ring-yellow-500"
+                    />
+                    <label htmlFor="isPublic" className="ml-2 text-sm text-white">
+                      Make this activity public
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsActivityModalOpen(false)}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                  >
+                    {editingActivity ? 'Update Activity' : 'Add Activity'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

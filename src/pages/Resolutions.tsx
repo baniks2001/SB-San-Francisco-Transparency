@@ -57,11 +57,32 @@ const Resolutions: React.FC = () => {
     console.log('Resolution templateId:', resolution.templateId);
     console.log('Available templates:', templates);
     
-    // Find the template for this resolution
-    const selectedTemplate = templates.find(t => t._id === resolution.templateId);
+    // Find the template for this resolution - handle both ObjectId and string formats
+    let selectedTemplate: ResolutionTemplate | undefined;
+    
+    if (resolution.templateId) {
+      // Try to find template by string ID first
+      selectedTemplate = templates.find(t => t._id === resolution.templateId);
+      
+      // If not found, try to handle ObjectId format
+      if (!selectedTemplate && typeof resolution.templateId === 'object') {
+        const templateIdString = (resolution.templateId as any)._id || (resolution.templateId as any).toString();
+        selectedTemplate = templates.find(t => t._id === templateIdString);
+      }
+      
+      // If still not found, try converting to string
+      if (!selectedTemplate) {
+        const templateIdString = resolution.templateId.toString();
+        selectedTemplate = templates.find(t => t._id === templateIdString);
+      }
+    }
+    
+    console.log('Found template:', selectedTemplate);
     
     if (!selectedTemplate) {
       console.error('No template found for this resolution');
+      console.error('Template ID:', resolution.templateId);
+      console.error('Available template IDs:', templates.map(t => t._id));
       alert('No template is assigned to this resolution. Please contact the administrator.');
       return;
     }
@@ -77,20 +98,30 @@ const Resolutions: React.FC = () => {
   };
 
   const printDocument = (resolution: Resolution) => {
-    // Handle templateId
-    const templateId = resolution.templateId;
+    // Handle templateId - improve lookup logic
+    let selectedTemplate: ResolutionTemplate | undefined;
     
-    if (!templateId) {
-      console.error('No template assigned to this resolution');
-      alert('No template is assigned to this resolution. Please contact the administrator.');
-      return;
+    if (resolution.templateId) {
+      // Try to find template by string ID first
+      selectedTemplate = templates.find(t => t._id === resolution.templateId);
+      
+      // If not found, try to handle ObjectId format
+      if (!selectedTemplate && typeof resolution.templateId === 'object') {
+        const templateIdString = (resolution.templateId as any)._id || (resolution.templateId as any).toString();
+        selectedTemplate = templates.find(t => t._id === templateIdString);
+      }
+      
+      // If still not found, try converting to string
+      if (!selectedTemplate) {
+        const templateIdString = resolution.templateId.toString();
+        selectedTemplate = templates.find(t => t._id === templateIdString);
+      }
     }
-    
-    // Find the template
-    const selectedTemplate = templates.find(t => t._id === templateId);
     
     if (!selectedTemplate) {
       console.error('No template found for this resolution');
+      console.error('Template ID:', resolution.templateId);
+      console.error('Available template IDs:', templates.map(t => t._id));
       alert('No template is assigned to this resolution. Please contact the administrator.');
       return;
     }
@@ -111,40 +142,124 @@ const Resolutions: React.FC = () => {
     }
   };
 
-  const generateDocumentHTML = (resolution: Resolution, template: ResolutionTemplate): string => {
+  const downloadDocument = (resolution: Resolution) => {
+    if (resolution.status === 'Approved' && resolution.scannedCopy) {
+      // Download the uploaded scanned file for approved resolutions
+      const link = document.createElement('a');
+      link.href = getImageUrl(resolution.scannedCopy);
+      link.download = `Resolution_${resolution.resolutionNumber}_Approved.${resolution.scannedCopy.split('.').pop() || 'pdf'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Generate and download PDF for pending resolutions or approved without scanned copy
+      let selectedTemplate: ResolutionTemplate | undefined;
+      
+      if (resolution.templateId) {
+        // Try to find template by string ID first
+        selectedTemplate = templates.find(t => t._id === resolution.templateId);
+        
+        // If not found, try to handle ObjectId format
+        if (!selectedTemplate && typeof resolution.templateId === 'object') {
+          const templateIdString = (resolution.templateId as any)._id || (resolution.templateId as any).toString();
+          selectedTemplate = templates.find(t => t._id === templateIdString);
+        }
+        
+        // If still not found, try converting to string
+        if (!selectedTemplate) {
+          const templateIdString = resolution.templateId.toString();
+          selectedTemplate = templates.find(t => t._id === templateIdString);
+        }
+      }
+      
+      if (!selectedTemplate) {
+        console.error('No template found for this resolution');
+        alert('No template is assigned to this resolution. Please contact the administrator.');
+        return;
+      }
+      
+      // Generate document and create PDF using browser print functionality
+      const documentContent = generateDocumentHTML(resolution, selectedTemplate);
+      const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+      if (printWindow) {
+        printWindow.document.write(documentContent);
+        printWindow.document.title = `Resolution ${resolution.resolutionNumber}`;
+        printWindow.document.close();
+        
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            // User needs to select "Save as PDF" in the print dialog
+            setTimeout(() => {
+              printWindow.close();
+            }, 1000);
+          }, 500);
+        };
+      }
+    }
+  };
+
+  const generateDocumentHTML = (resolution: Resolution, template: ResolutionTemplate) => {
+    const present = resolution.present || [];
+    const absent = resolution.absent || [];
+    const secondContent = resolution.secondContent || '';
+    
     return `
       <!DOCTYPE html>
       <html>
       <head>
-        <meta charset="utf-8">
         <title>Resolution ${resolution.resolutionNumber}</title>
         <style>
+          @page { margin: 0.5in; }
           body { 
             font-family: Arial, sans-serif; 
-            line-height: 1.6; 
-            margin: 40px; 
-            color: #000;
-            background: white;
+            margin: 0; 
+            padding: 10px; 
+            background-color: white;
           }
-          .header { 
-            text-align: center; 
-            margin-bottom: 30px; 
-            border-bottom: 2px solid #333;
-            padding-bottom: 20px;
-          }
-          .title { 
-            font-size: 18px; 
-            font-weight: bold; 
-            margin: 20px 0; 
+          .header { text-align: center; margin-bottom: 10px; }
+          .title-section {
+            margin: 10px 0;
             text-align: center;
+            page-break-after: avoid;
           }
-          .content-section { margin: 20px 0; }
+          .content-section { 
+            margin: 10px 0; 
+            page-break-inside: auto;
+          }
           .content-text { 
-            padding: 10px 0; 
-            line-height: 1.6;
+            padding: 5px 0; 
+            line-height: 1.1;
+            margin-bottom: 5px;
+            page-break-inside: avoid;
           }
-          .signatories { margin-top: 40px; }
-          .signatory { margin: 15px 0; }
+          .signatories {
+            margin-top: 20px;
+            page-break-inside: avoid;
+          }
+          .signatory {
+            margin: 10px 0;
+            page-break-inside: avoid;
+          }
+          .attested-by {
+            margin-top: 15px;
+            page-break-inside: avoid;
+          }
+          .attested-signatory {
+            margin: 5px 0;
+            page-break-inside: avoid;
+          }
+          /* Prevent page breaks before these elements */
+          .content-section:first-child,
+          .title-section,
+          .signatories,
+          .attested-by {
+            page-break-before: auto;
+          }
+          /* Allow page breaks between sections if needed */
+          .content-section + .content-section {
+            page-break-before: auto;
+          }
           @media print {
             body { margin: 0; }
             .no-print { display: none; }
@@ -163,46 +278,108 @@ const Resolutions: React.FC = () => {
           ).join('') || ''}
         </div>
 
-        <!-- Present and Absent at top -->
-        <div class="content-section">
-          <label>Present:</label>
-          <div class="content-text">
-            <!-- Present members will be listed here -->
-          </div>
-        </div>
-
-        <div class="content-section">
-          <label>Absent:</label>
-          <div class="content-text">
-            <!-- Absent members will be listed here -->
-          </div>
-        </div>
-
         <!-- Resolution Content -->
+        <div class="content-section" style="text-align: center;">
+          <div class="content-text" style="text-align: left; display: inline-block;">${resolution.content.replace(/\n/g, '<br>')}</div>
+        </div>
+
+        <!-- Add more space after main content -->
+        <div style="margin-bottom: 15px;"></div>
+
+        <!-- Present and Absent Members -->
+        <div class="content-section">
+          <!-- Present Members -->
+          ${present.length > 0 ? `
+            <div class="content-text" style="margin-bottom: 15px; color: #000000; text-align: left;">
+              <div style="font-weight: bold; margin-bottom: 10px; color: #000000;">Present:</div>
+${present.map((member: any, index: number) => 
+  `  <div style="margin-bottom: 2px; color: #000000; line-height: 1.1;">
+    <div style="display: flex; align-items: flex-start; justify-content: center;">
+      <span style="display: inline-block; min-width: 200px; color: #000000;">${member.name}</span>
+      <div style="margin-left: 50px;">
+        <div style="font-weight: bold; color: #000000;">${member.position}</div>
+        ${member.position2 ? `
+          <div style="font-weight: bold; color: #000000; margin-top: 0px;">${member.position2}</div>
+        ` : ''}
+      </div>
+    </div>
+  </div>`
+).join('\n')}
+            </div>
+          ` : ''}
+
+          <!-- Add more space between Present and Absent -->
+          <div style="margin-bottom: 10px;"></div>
+
+          <!-- Absent Members -->
+          ${absent.length > 0 ? `
+            <div class="content-text" style="margin-bottom: 15px; color: #000000; text-align: left;">
+              <div style="font-weight: bold; margin-bottom: 10px; color: #000000;">Absent:</div>
+${absent.map((member: any, index: number) => 
+  `  <div style="margin-bottom: 2px; color: #000000; line-height: 1.1;">
+    <div style="display: flex; align-items: flex-start; justify-content: center;">
+      <span style="display: inline-block; min-width: 200px; color: #000000;">${member.name}</span>
+      <div style="margin-left: 50px;">
+        <div style="font-weight: bold; color: #000000;">${member.position}</div>
+        ${member.position2 ? `
+          <div style="font-weight: bold; color: #000000; margin-top: 0px;">${member.position2}</div>
+        ` : ''}
+      </div>
+    </div>
+  </div>`
+).join('\n')}
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Resolution Number and Series - Below Absent, Above Second Content -->
         <div class="title-section">
-          <h2 style="font-size: 20px; font-weight: bold;">RESOLUTION NO. ${resolution.resolutionNumber}, Series ${resolution.series}</h2>
+          <h2 style="font-size: 20px; font-weight: bold;">RESOLUTION NO. ${resolution.resolutionNumber} SERIES OF ${resolution.series}</h2>
         </div>
 
-        <div class="content-section">
-          <div class="content-text">${resolution.content || ''}</div>
-        </div>
-
-        <div class="content-section">
-          <div class="content-text">${resolution.content || ''}</div>
-        </div>
+        <!-- Second Content -->
+        ${secondContent ? `
+          <div class="content-section" style="text-align: center; page-break-inside: auto;">
+            <div class="content-text" style="font-size: 14px; font-family: Arial; font-weight: normal; text-decoration: none; text-align: left; display: inline-block; page-break-inside: auto;">${secondContent.replace(/\n/g, '<br>')}</div>
+          </div>
+        ` : ''}
 
         <!-- Signatories -->
         <div class="signatories">
+          ${resolution.signatories?.map(signatory => `
+            <div class="signatory" style="text-align: ${signatory.alignment || 'left'}; font-size: ${signatory.fontSize || 14}px; font-family: ${signatory.fontFamily || 'Arial'};">
+              <div style="font-weight: ${signatory.isBold ? 'bold' : 'normal'}; text-decoration: ${signatory.isUnderline ? 'underline' : 'none'};">
+                ${signatory.name}
+              </div>
+              <div style="font-size: 14px;">${signatory.position}</div>
+              ${(signatory as any).optionalText ? `<div style="font-size: 12px; margin-top: 2px;">${(signatory as any).optionalText}</div>` : ''}
+            </div>
+          `).join('') || ''}
+        </div>
+
+        <!-- Attested By -->
+        ${(resolution as any).attestedBy && (resolution as any).attestedBy.length > 0 ? `
+          <div style="margin-top: 15px;">
+            <div style="text-align: left; font-weight: bold; font-size: 14px; margin-bottom: 10px;">ATTESTED BY:</div>
+            <div class="attested-by">
+              ${(resolution as any).attestedBy.map((attested: any) => `
+                <div class="attested-signatory" style="text-align: ${attested.alignment || 'left'}; font-size: ${attested.fontSize || 14}px; font-family: ${attested.fontFamily || 'Arial'};">
+                  <div style="font-weight: ${attested.isBold ? 'bold' : 'normal'}; text-decoration: ${attested.isUnderline ? 'underline' : 'none'};">
+                    ${attested.name}
+                  </div>
+                  <div style="font-size: 14px;">${attested.position}</div>
+                  ${attested.optionalText ? `<div style="font-size: 12px; margin-top: 2px;">${attested.optionalText}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Footer -->
+        <div style="margin-top: 40px;">
           ${template.footer?.texts?.map(text => 
             `<div style="font-size: ${text.fontSize}px; font-family: ${text.fontFamily}; color: ${text.fontColor || '#000'}; text-align: ${text.alignment.toLowerCase()}; font-weight: ${text.isBold ? 'bold' : 'normal'}; font-style: ${text.isItalic ? 'italic' : 'normal'}; text-decoration: ${text.isUnderline ? 'underline' : 'none'}; margin: 5px 0;">${text.text}</div>`
           ).join('') || ''}
-          
-          <div class="signatory">
-            <div style="text-align: center; margin-top: 30px;">
-              <div style="border-bottom: 1px solid #000; width: 200px; margin: 0 auto;"></div>
-              <div style="margin-top: 5px;">${resolution.author || 'Sangguniang Bayan Member'}</div>
-            </div>
-          </div>
         </div>
       </body>
       </html>
@@ -270,34 +447,33 @@ const Resolutions: React.FC = () => {
           <p className="text-white">Try adjusting your search or filter criteria</p>
         </div>
       ) : (
-        <div className="bg-white shadow overflow-hidden rounded-md">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+        <div className="overflow-x-auto bg-white">
+            <table className="min-w-full bg-white divide-y divide-gray-200">
+              <thead className="bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Resolution No.
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Series
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Author
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredResolutions.map((resolution) => (
-                  <tr key={resolution._id} className="hover:bg-gray-50">
+                  <tr key={resolution._id} className="bg-white">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
                       {resolution.resolutionNumber}
                     </td>
@@ -337,22 +513,18 @@ const Resolutions: React.FC = () => {
                         >
                           Print
                         </button>
-                        {resolution.scannedCopy && (
-                          <a
-                            href={getImageUrl(resolution.scannedCopy)}
-                            download
-                            className="text-purple-600 hover:text-purple-900"
-                          >
-                            Download
-                          </a>
-                        )}
+                        <button
+                          onClick={() => downloadDocument(resolution)}
+                          className="text-purple-600 hover:text-purple-900"
+                        >
+                          Download
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
         </div>
       )}
       {/* Document Modal */}
@@ -410,15 +582,12 @@ const Resolutions: React.FC = () => {
                 >
                   Close
                 </button>
-                {selectedResolution.scannedCopy && (
-                  <a
-                    href={getImageUrl(selectedResolution.scannedCopy)}
-                    download
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    Download
-                  </a>
-                )}
+                <button
+                  onClick={() => downloadDocument(selectedResolution)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  Download
+                </button>
               </div>
             </div>
           </div>

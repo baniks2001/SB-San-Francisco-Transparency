@@ -3,49 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@headlessui/react": "^2.2.9",
-    "@heroicons/react": "^2.2.0",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.18.126",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.13.6",
-    "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",
     "react-scripts": "5.0.1",
     "tailwindcss": "^3.4.19",
-    "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4"
+    "typescript": "^4.9.5"
   },
   "scripts": {
-    "start": "npm run start:monitor",
-    "start:network": "node scripts/start-network.js && cross-env PORT=$FRONTEND_PORT react-scripts start",
-    "start:monitor": "node scripts/network-monitor.js monitor & cross-env PORT=$FRONTEND_PORT react-scripts start",
-    "start:dev": "cross-env PORT=$FRONTEND_PORT react-scripts start",
-    "build": "react-scripts build",
-    "build:netlify": "react-scripts build",
-    "serve": "node scripts/serve-with-api.js",
-    "serve:network": "node scripts/serve-network.js",
-    "serve:monitor": "node scripts/network-monitor.js monitor & node scripts/serve-network.js",
-    "serve:api": "node scripts/serve-with-api.js",
-    "network:check": "node scripts/network-monitor.js check",
-    "network:update": "node scripts/network-monitor.js update",
-    "network:serve": "node scripts/serve-network.js check",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "start": "react-scripts start",
+    "start:dev": "react-scripts start",
+    "build": "react-scripts build"
   },
   "browserslist": {
     "production": [
@@ -60,6 +32,8 @@
     ]
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
     "autoprefixer": "^10.4.27",
     "cross-env": "^10.1.0",
     "postcss": "^8.5.8"

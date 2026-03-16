@@ -18,6 +18,7 @@ export interface ISystemSettings extends Document {
     mobileNumbers: string[];
     email: string;
     address: string;
+    facebook?: string;
   };
   mapLocation?: {
     latitude: number;
@@ -50,7 +51,7 @@ export interface ISystemSettings extends Document {
   projectImages: Array<{
     projectName: string;
     details: string;
-    image: string;
+    image?: string;
   }>;
   announcements: Array<{
     title: string;
@@ -74,7 +75,8 @@ const themeColorsSchema = new Schema({
 const contactInfoSchema = new Schema({
   mobileNumbers: [{ type: String }],
   email: { type: String, required: true },
-  address: { type: String, required: true }
+  address: { type: String, required: true },
+  facebook: { type: String }
 }, { _id: false });
 
 const mapLocationSchema = new Schema({
@@ -101,7 +103,7 @@ const officeHoursSchema = new Schema({
 }, { _id: false });
 
 const projectImageSchema = new Schema({
-  image: { type: String, required: true },
+  image: { type: String },
   projectName: { type: String, required: true },
   details: { type: String, required: true }
 }, { _id: false });
@@ -138,7 +140,7 @@ const systemSettingsSchema = new Schema<ISystemSettings>({
   },
   contactInfo: {
     type: contactInfoSchema,
-    default: () => ({ mobileNumbers: [], email: '', address: '' })
+    default: () => ({ mobileNumbers: [], email: '', address: '', facebook: '' })
   },
   mapLocation: {
     type: mapLocationSchema,

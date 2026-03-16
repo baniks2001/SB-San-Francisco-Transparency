@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ResolutionTemplate } from '../../types';
 import api from '../../services/api';
+import NotificationModal from '../../components/NotificationModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const AdminTemplates: React.FC = () => {
   const [templates, setTemplates] = useState<ResolutionTemplate[]>([]);
@@ -48,6 +50,20 @@ const AdminTemplates: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     fetchTemplates();
@@ -118,6 +134,26 @@ const AdminTemplates: React.FC = () => {
       return cleaned;
     };
 
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -160,25 +196,33 @@ const AdminTemplates: React.FC = () => {
         }
       }
 
-      fetchTemplates();
+      await fetchTemplates();
       closeModal();
+      showNotification('Success', editingTemplate ? 'Template updated successfully!' : 'Template created successfully!', 'success');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save template');
+      showNotification('Error', err.response?.data?.message || 'Failed to save template', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this template?')) return;
-
-    try {
-      await api.delete(`/templates/${id}`);
-      setSuccess('Template deleted successfully!');
-      fetchTemplates();
-    } catch (err) {
-      setError('Failed to delete template');
-    }
+    showConfirmation(
+      'Delete Template',
+      'Are you sure you want to delete this template? This action cannot be undone.',
+      async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await api.delete(`/templates/${id}`);
+          showNotification('Success', 'Template deleted successfully!', 'success');
+          await fetchTemplates();
+        } catch (err: any) {
+          showNotification('Error', err.response?.data?.message || 'Failed to delete template', 'error');
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false, isOpen: false }));
+        }
+      }
+    );
   };
 
   const openModal = (template?: ResolutionTemplate) => {
@@ -393,18 +437,7 @@ const AdminTemplates: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-900 border border-red-700 rounded-lg p-4">
-          <p className="text-red-200">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-900 border border-green-700 rounded-lg p-4">
-          <p className="text-green-200">{success}</p>
-        </div>
-      )}
-
+      
       {/* Templates Table */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
         {/* Mobile Card View */}
@@ -904,6 +937,26 @@ const AdminTemplates: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

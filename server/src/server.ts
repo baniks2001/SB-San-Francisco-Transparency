@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { DB_OPTIMIZATION, createIndexes, monitorPerformance } from './config/database';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -17,6 +18,9 @@ import announcementRoutes from './routes/announcements';
 import systemRoutes from './routes/system';
 import settingsRoutes from './routes/settings';
 import templateRoutes from './routes/templates';
+import activityRoutes from './routes/activities';
+import cdnRoutes from './middleware/cdn';
+import healthRoutes from './routes/health';
 
 // Load environment variables from parent directory
 dotenv.config({ path: '../.env' });
@@ -24,13 +28,28 @@ dotenv.config({ path: '../.env' });
 const app = express();
 const PORT = process.env.SERVER_PORT || 5000;
 
-// Middleware
-app.use(cors());
+// Middleware - Support both localhost and network access
+app.use(cors({
+  origin: [
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000',
+    'http://10.18.110.103:3000',
+    'http://192.168.56.1:3000',
+    'http://172.18.80.1:3000'
+  ],
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// CDN routes
+app.use('/cdn', cdnRoutes);
+
+// Health check routes
+app.use('/api', healthRoutes);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -45,21 +64,26 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/activities', activityRoutes);
 
 // Database connection
 console.log('Attempting to connect to MongoDB...');
-mongoose.connect(process.env.MONGODB_URI || '', {
-  serverSelectionTimeoutMS: 30000, // Keep trying to send operations for 30 seconds
-  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  connectTimeoutMS: 30000, // Give up initial connection after 30 seconds
-  maxPoolSize: 10, // Maintain up to 10 socket connections
-  minPoolSize: 2, // Maintain at least 2 socket connections
-})
-  .then(() => {
+monitorPerformance();
+
+mongoose.connect(process.env.MONGODB_URI || '', DB_OPTIMIZATION)
+  .then(async () => {
     console.log('Connected to MongoDB Atlas');
+    
+    // Create database indexes for optimal performance
+    await createIndexes();
+    
     console.log(`Starting server on port ${PORT}...`);
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    const HOST = '0.0.0.0'; // Allow network access
+    const portNumber = Number(PORT);
+    app.listen(portNumber, HOST, () => {
+      console.log(`Server is running on http://${HOST}:${PORT}`);
+      console.log(`Local access: http://localhost:${PORT}`);
+      console.log(`Network access: http://10.18.110.103:${PORT}`);
     });
   })
   .catch((error) => {

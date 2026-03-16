@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import NotificationModal from '../../components/NotificationModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 interface User {
   _id: string;
@@ -35,6 +37,20 @@ const AdminUsers: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'danger' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     fetchData();
@@ -140,10 +156,10 @@ const AdminUsers: React.FC = () => {
     try {
       if (modalType === 'create') {
         await api.post('/users', formData);
-        setSuccess('User created successfully!');
+        showNotification('Success', 'User created successfully!', 'success');
       } else {
         await api.put(`/users/${editingUser?._id}`, formData);
-        setSuccess('User updated successfully!');
+        showNotification('Success', 'User updated successfully!', 'success');
       }
 
       // Upload profile image if selected
@@ -153,13 +169,13 @@ const AdminUsers: React.FC = () => {
         await api.post(`/users/${editingUser._id}/profile-image`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        setSuccess('Profile image updated successfully!');
+        showNotification('Success', 'Profile image updated successfully!', 'success');
       }
 
       await fetchData();
       closeUserModal();
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to save user');
+      showNotification('Error', error.response?.data?.message || 'Failed to save user', 'error');
     }
   };
 
@@ -171,50 +187,84 @@ const AdminUsers: React.FC = () => {
     try {
       if (modalType === 'create') {
         await api.post('/positions', formData);
-        setSuccess('Position created successfully!');
+        showNotification('Success', 'Position created successfully!', 'success');
       } else {
         await api.put(`/positions/${editingPosition?._id}`, formData);
-        setSuccess('Position updated successfully!');
+        showNotification('Success', 'Position updated successfully!', 'success');
       }
 
       await fetchData();
       closePositionModal();
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to save position');
+      showNotification('Error', error.response?.data?.message || 'Failed to save position', 'error');
     }
+  };
+
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'danger') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
-    
-    try {
-      await api.delete(`/api/users/${id}`);
-      setSuccess('User deleted successfully!');
-      await fetchData();
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to delete user');
-    }
+    showConfirmation(
+      'Delete User',
+      'Are you sure you want to delete this user? This action cannot be undone.',
+      async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await api.delete(`/api/users/${id}`);
+          showNotification('Success', 'User deleted successfully!', 'success');
+          await fetchData();
+        } catch (error: any) {
+          showNotification('Error', error.response?.data?.message || 'Failed to delete user', 'error');
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false, isOpen: false }));
+        }
+      }
+    );
   };
 
   const handleDeletePosition = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this position?')) return;
-    
-    try {
-      await api.delete(`/api/positions/${id}`);
-      setSuccess('Position deleted successfully!');
-      await fetchData();
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to delete position');
-    }
+    showConfirmation(
+      'Delete Position',
+      'Are you sure you want to delete this position? This action cannot be undone.',
+      async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await api.delete(`/api/positions/${id}`);
+          showNotification('Success', 'Position deleted successfully!', 'success');
+          await fetchData();
+        } catch (error: any) {
+          showNotification('Error', error.response?.data?.message || 'Failed to delete position', 'error');
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false, isOpen: false }));
+        }
+      }
+    );
   };
 
   const toggleUserStatus = async (id: string, currentStatus: boolean) => {
     try {
       await api.put(`/api/users/${id}/status`, { isActive: !currentStatus });
-      setSuccess(`User ${currentStatus ? 'activated' : 'deactivated'} successfully!`);
+      showNotification('Success', `User ${currentStatus ? 'deactivated' : 'activated'} successfully!`, 'success');
       await fetchData();
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to update user status');
+      showNotification('Error', error.response?.data?.message || 'Failed to update user status', 'error');
     }
   };
 
@@ -246,18 +296,7 @@ const AdminUsers: React.FC = () => {
         <p className="text-gray-300 text-sm sm:text-base">Manage user accounts and position roles</p>
       </div>
 
-      {error && (
-        <div className="bg-red-900 border border-red-700 rounded-lg p-4">
-          <p className="text-red-200">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-900 border border-green-700 rounded-lg p-4">
-          <p className="text-green-200">{success}</p>
-        </div>
-      )}
-
+      
       {/* Position Roles Table */}
       <div className="bg-gray-900 rounded-xl shadow-xl border border-gray-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
@@ -593,6 +632,25 @@ const AdminUsers: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };
