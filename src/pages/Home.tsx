@@ -28,16 +28,21 @@ const Home: React.FC = () => {
   // Bid Awards state
   const [bidAwards, setBidAwards] = useState<any[]>([]);
   const [showBidAwardsModal, setShowBidAwardsModal] = useState(false);
-  const [currentBidAwardIndex, setCurrentBidAwardIndex] = useState(0);
   
   // Form state
   const [showFormModal, setShowFormModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    complainantName: '',
+    contactNumber: '',
+    address: '',
     email: '',
-    phone: '',
-    concernType: '',
-    message: ''
+    incidentDate: '',
+    incidentTime: '',
+    incidentLocation: '',
+    partiesInvolved: '',
+    description: '',
+    desiredOutcome: '',
+    concernType: 'general'
   });
   
   // Modal states
@@ -77,19 +82,6 @@ const Home: React.FC = () => {
     }
   };
 
-  // Navigation functions for bid awards
-  const handleNextBidAward = () => {
-    if (bidAwards.length > 0) {
-      setCurrentBidAwardIndex((prev) => (prev + 1) % bidAwards.length);
-    }
-  };
-
-  const handlePrevBidAward = () => {
-    if (bidAwards.length > 0) {
-      setCurrentBidAwardIndex((prev) => (prev - 1 + bidAwards.length) % bidAwards.length);
-    }
-  };
-
   // Function to fetch activities
   const fetchActivities = useCallback(async () => {
     try {
@@ -123,8 +115,8 @@ const Home: React.FC = () => {
     e.preventDefault();
     setConfirmationModal({
       isOpen: true,
-      title: 'Submit Report',
-      message: 'Are you sure you want to submit this report?',
+      title: 'Submit Complaint',
+      message: 'Are you sure you want to submit this complaint?',
       onConfirm: async () => {
         setConfirmationModal(prev => ({ ...prev, isLoading: true }));
         try {
@@ -132,22 +124,28 @@ const Home: React.FC = () => {
           setNotificationModal({
             isOpen: true,
             title: 'Success',
-            message: 'Your report has been submitted successfully.',
+            message: 'Your complaint has been submitted successfully.',
             type: 'success'
           });
           setFormData({
-            name: '',
+            complainantName: '',
+            contactNumber: '',
+            address: '',
             email: '',
-            phone: '',
-            concernType: '',
-            message: ''
+            incidentDate: '',
+            incidentTime: '',
+            incidentLocation: '',
+            partiesInvolved: '',
+            description: '',
+            desiredOutcome: '',
+            concernType: 'general'
           });
           setShowFormModal(false);
         } catch (error) {
           setNotificationModal({
             isOpen: true,
             title: 'Error',
-            message: 'Failed to submit report. Please try again.',
+            message: 'Failed to submit complaint. Please try again.',
             type: 'error'
           });
         } finally {
@@ -1049,7 +1047,7 @@ const Home: React.FC = () => {
           <div className="bg-amber-800 px-8 py-4 sm:py-6">
             <div className="text-center">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
-                Report a Concern
+                File a Complaint
               </h2>
             </div>
           </div>
@@ -1057,12 +1055,12 @@ const Home: React.FC = () => {
           {/* Content Section */}
           <div className="p-4 sm:p-6 bg-white">
             <div className="text-center">
-              <p className="text-gray-600 mb-6">Have a concern or report to file? Let us know and we'll address it promptly.</p>
+              <p className="text-gray-600 mb-6">Have an incident or concern to report? File a formal complaint and we'll address it promptly.</p>
               <button
                 onClick={() => setShowFormModal(true)}
                 className="bg-yellow-600 text-white px-8 py-4 rounded-lg hover:bg-yellow-700 transition-colors duration-200 font-semibold text-lg"
               >
-                File a Report
+                File a Complaint
               </button>
             </div>
           </div>
@@ -1241,7 +1239,7 @@ const Home: React.FC = () => {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-black pr-2">File a Report</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-black pr-2">File a Complaint</h2>
                 <button
                   onClick={() => setShowFormModal(false)}
                   className="text-gray-400 hover:text-gray-600 flex-shrink-0"
@@ -1253,38 +1251,124 @@ const Home: React.FC = () => {
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1">Complainant Name</label>
+                      <input
+                        type="text"
+                        name="complainantName"
+                        value={formData.complainantName}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1">Contact Number</label>
+                      <input
+                        type="tel"
+                        name="contactNumber"
+                        value={formData.contactNumber}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1">Address</label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1">Incident Date *</label>
+                      <input
+                        type="date"
+                        name="incidentDate"
+                        value={formData.incidentDate}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-black mb-1">Incident Time *</label>
+                      <input
+                        type="time"
+                        name="incidentTime"
+                        value={formData.incidentTime}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-black mb-1">Name *</label>
+                    <label className="block text-sm font-medium text-black mb-1">Incident Location *</label>
                     <input
                       type="text"
-                      name="name"
-                      value={formData.name}
+                      name="incidentLocation"
+                      value={formData.incidentLocation}
                       onChange={handleInputChange}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-black mb-1">Email *</label>
+                    <label className="block text-sm font-medium text-black mb-1">Parties Involved *</label>
                     <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
+                      type="text"
+                      name="partiesInvolved"
+                      value={formData.partiesInvolved}
                       onChange={handleInputChange}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-black mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
+                    <label className="block text-sm font-medium text-black mb-1">Description *</label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
                       onChange={handleInputChange}
+                      required
+                      rows={4}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Desired Outcome</label>
+                    <textarea
+                      name="desiredOutcome"
+                      value={formData.desiredOutcome}
+                      onChange={handleInputChange}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-black mb-1">Concern Type *</label>
                     <select
@@ -1294,24 +1378,11 @@ const Home: React.FC = () => {
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     >
-                      <option value="">Select a concern type</option>
-                      <option value="complaint">Complaint</option>
-                      <option value="suggestion">Suggestion</option>
-                      <option value="inquiry">Inquiry</option>
-                      <option value="report">Report</option>
-                      <option value="other">Other</option>
+                      <option value="general">General</option>
+                      <option value="misconduct">Misconduct</option>
+                      <option value="safety">Safety</option>
+                      <option value="child_protection">Child Protection</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-black mb-1">Message *</label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      required
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                    />
                   </div>
                 </div>
                 <div className="mt-6 flex justify-end space-x-3">
@@ -1326,7 +1397,7 @@ const Home: React.FC = () => {
                     type="submit"
                     className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors duration-200"
                   >
-                    Submit Report
+                    Submit Complaint
                   </button>
                 </div>
               </form>
