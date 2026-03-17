@@ -1,12 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Procurement, Budget } from '../types';
 import api from '../services/api';
+import NotificationModal from '../components/NotificationModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Procurements: React.FC = () => {
   const [procurements, setProcurements] = useState<Procurement[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'procurements' | 'budgets'>('procurements');
+
+  // Modal states
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,6 +87,29 @@ const Procurements: React.FC = () => {
 
     fetchData();
   }, []);
+
+  // Modal helper functions
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'info') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -245,6 +286,25 @@ const Procurements: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modern Modals */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

@@ -2,18 +2,26 @@ import mongoose from 'mongoose';
 
 // Database optimization configuration
 const DB_OPTIMIZATION = {
-  // Connection pool settings
-  maxPoolSize: 10,
-  minPoolSize: 2,
+  // Connection pool settings - increased for better performance
+  maxPoolSize: 20,
+  minPoolSize: 5,
+  maxIdleTimeMS: 30000,
   
-  // Timeout settings
-  serverSelectionTimeoutMS: 30000,
-  socketTimeoutMS: 45000,
-  connectTimeoutMS: 30000,
+  // Timeout settings - reduced for faster failover
+  serverSelectionTimeoutMS: 10000,
+  socketTimeoutMS: 20000,
+  connectTimeoutMS: 10000,
   
   // Retry settings
   retryWrites: true,
-  retryReads: true
+  retryReads: true,
+  
+  // Write concern for faster writes
+  writeConcern: {
+    w: 1, // majority
+    j: true,
+    wtimeout: 5000
+  }
 };
 
 // Create indexes for optimal performance

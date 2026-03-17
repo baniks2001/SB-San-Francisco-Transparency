@@ -60,6 +60,23 @@ export interface ISystemSettings extends Document {
     priority: 'Urgent' | 'Normal' | 'Low';
     createdAt: Date;
   }>;
+  bidAwards: Array<{
+    awardName: string;
+    description: string;
+    image?: string;
+    dateAwarded: string;
+    contractor: string;
+    amount: number;
+    status: 'Active' | 'Completed' | 'Cancelled';
+    createdAt: Date;
+  }>;
+  videos: Array<{
+    title: string;
+    description: string;
+    videoUrl: string;
+    thumbnail?: string;
+    createdAt: Date;
+  }>;
   copyrightText?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -107,6 +124,25 @@ const projectImageSchema = new Schema({
   projectName: { type: String, required: true },
   details: { type: String, required: true }
 }, { _id: false });
+
+const bidAwardSchema = new Schema({
+  awardName: { type: String, required: true },
+  description: { type: String, required: true },
+  image: { type: String },
+  dateAwarded: { type: String, required: true },
+  contractor: { type: String, required: true },
+  amount: { type: Number, required: true },
+  status: { type: String, enum: ['Active', 'Completed', 'Cancelled'], default: 'Active' },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: false });
+
+const videoSchema = new Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  videoUrl: { type: String, required: true },
+  thumbnail: { type: String },
+  createdAt: { type: Date, default: Date.now }
+});
 
 const systemSettingsSchema = new Schema<ISystemSettings>({
   systemName: {
@@ -173,6 +209,8 @@ const systemSettingsSchema = new Schema<ISystemSettings>({
     priority: { type: String, enum: ['Urgent', 'Normal', 'Low'], default: 'Normal' },
     createdAt: { type: Date, default: Date.now }
   }],
+  bidAwards: [bidAwardSchema],
+  videos: [videoSchema],
   copyrightText: {
     type: String,
     default: `© ${new Date().getFullYear()} Sangguniang Bayan, San Francisco, Southern Leyte. All rights reserved.`

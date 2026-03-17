@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Vacancy } from '../types';
 import api from '../services/api';
+import NotificationModal from '../components/NotificationModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Vacancies: React.FC = () => {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -15,6 +17,22 @@ const Vacancies: React.FC = () => {
     address: '',
     resume: null as File | null,
     certificates: [] as File[]
+  });
+
+  // Modal states
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info' as 'danger' | 'warning' | 'info',
+    isLoading: false
   });
 
   useEffect(() => {
@@ -53,6 +71,28 @@ const Vacancies: React.FC = () => {
     fetchVacancies();
   }, []);
 
+  // Modal helper functions
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'info') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
+
   const handleApply = (vacancy: Vacancy) => {
     setSelectedVacancy(vacancy);
     setShowApplicationModal(true);
@@ -61,7 +101,7 @@ const Vacancies: React.FC = () => {
   const handleSubmitApplication = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle application submission
-    alert('Application submitted successfully!');
+    showNotification('Success', 'Application submitted successfully!', 'success');
     setShowApplicationModal(false);
     setApplicationForm({
       fullName: '',
@@ -222,6 +262,25 @@ const Vacancies: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modern Modals */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { SystemSettings, Activity } from '../types';
 import { getImageUrl } from '../utils/imageUtils';
 import { apiWithRetry } from '../services/api';
+import NotificationModal from '../components/NotificationModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Home: React.FC = () => {
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
@@ -22,6 +24,38 @@ const Home: React.FC = () => {
   const [currentAnnouncement, setCurrentAnnouncement] = useState<any>(null);
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [activities, setActivities] = useState<Activity[]>([]);
+  
+  // Bid Awards state
+  const [bidAwards, setBidAwards] = useState<any[]>([]);
+  const [showBidAwardsModal, setShowBidAwardsModal] = useState(false);
+  const [currentBidAwardIndex, setCurrentBidAwardIndex] = useState(0);
+  
+  // Form state
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    concernType: '',
+    message: ''
+  });
+  
+  // Modal states
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'info'
+  });
+  
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    isLoading: false,
+    type: 'info' as 'info' | 'warning' | 'danger'
+  });
 
   // Statistics state
   const [statistics, setStatistics] = useState({
@@ -43,6 +77,19 @@ const Home: React.FC = () => {
     }
   };
 
+  // Navigation functions for bid awards
+  const handleNextBidAward = () => {
+    if (bidAwards.length > 0) {
+      setCurrentBidAwardIndex((prev) => (prev + 1) % bidAwards.length);
+    }
+  };
+
+  const handlePrevBidAward = () => {
+    if (bidAwards.length > 0) {
+      setCurrentBidAwardIndex((prev) => (prev - 1 + bidAwards.length) % bidAwards.length);
+    }
+  };
+
   // Function to fetch activities
   const fetchActivities = useCallback(async () => {
     try {
@@ -52,6 +99,90 @@ const Home: React.FC = () => {
       console.error('Failed to fetch activities:', error);
     }
   }, []);
+
+  // Function to fetch bid awards
+  const fetchBidAwards = useCallback(async () => {
+    try {
+      const response = await apiWithRetry.get('/bidawards');
+      setBidAwards(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch bid awards:', error);
+    }
+  }, []);
+
+  // Form handling functions
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Submit Report',
+      message: 'Are you sure you want to submit this report?',
+      onConfirm: async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await apiWithRetry.post('/complaints', formData);
+          setNotificationModal({
+            isOpen: true,
+            title: 'Success',
+            message: 'Your report has been submitted successfully.',
+            type: 'success'
+          });
+          setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            concernType: '',
+            message: ''
+          });
+          setShowFormModal(false);
+        } catch (error) {
+          setNotificationModal({
+            isOpen: true,
+            title: 'Error',
+            message: 'Failed to submit report. Please try again.',
+            type: 'error'
+          });
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isLoading: false }));
+        }
+      },
+      isLoading: false,
+      type: 'info'
+    });
+  };
+
+  // Function to download documents
+  const downloadDocument = async (item: any) => {
+    try {
+      const response = await apiWithRetry.get(`/uploads/${item.document}`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', item.document);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download document:', error);
+      setNotificationModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'Failed to download document. Please try again.',
+        type: 'error'
+      });
+    }
+  };
 
   // Function to fetch statistics
   const fetchStatistics = useCallback(async () => {
@@ -188,6 +319,8 @@ const Home: React.FC = () => {
         fetchStatistics();
         // Fetch activities
         fetchActivities();
+        // Fetch bid awards
+        fetchBidAwards();
       } catch (error: any) {
         console.error('Failed to fetch data:', error);
         setError(error?.response?.data?.message || error?.message || 'Failed to load content. Please check your connection and try again.');
@@ -196,7 +329,7 @@ const Home: React.FC = () => {
     };
 
     fetchData();
-  }, [preloadImages, fetchStatistics, fetchActivities]);
+  }, [preloadImages, fetchStatistics, fetchActivities, fetchBidAwards]);
 
   // Ticker effect - Rotate announcements
   useEffect(() => {
@@ -494,23 +627,100 @@ const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* Calendar of Activities Section */}
-      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
-          {/* Title Section */}
-          <div className="bg-amber-800 px-8 py-4 sm:py-6">
-            <div className="text-center">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
-                Calendar of Activities
-              </h2>
+      {/* 🏛️ Sangguniang Bayan Leadership Preview */}
+      {systemSettings?.organizationStructure && (
+        <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+            {/* Title Section */}
+            <div className="bg-amber-800 px-8 py-4 sm:py-6">
+              <div className="text-center">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
+                  🏛️ Sangguniang Bayan Leadership
+                </h2>
+              </div>
+            </div>
+            
+            {/* Content Section */}
+            <div className="p-4 sm:p-6 bg-white">
+              <div className="space-y-4">
+                {/* Vice Mayor */}
+                {systemSettings.organizationStructure
+                  .filter(member => member.position.toLowerCase().includes('vice mayor'))
+                  .map((member, index) => (
+                    <div key={index} className="flex items-center bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-200">
+                      <div className="flex-shrink-0 mr-4">
+                        {member.image ? (
+                          <img
+                            src={getImageUrl(member.image || '')}
+                            alt={member.name || 'Official'}
+                            className="w-24 h-24 rounded-lg object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold text-black mb-1">{member.name || 'Vice Mayor'}</h3>
+                        <p className="text-lg text-gray-600">{member.position || 'Vice Mayor'}</p>
+                      </div>
+                    </div>
+                  ))}
+                
+                {/* SB Members */}
+                {systemSettings.organizationStructure
+                  .filter(member => member.position.toLowerCase().includes('sb member') || member.position.toLowerCase().includes('sangguniang bayan member'))
+                  .map((member, index) => (
+                    <div key={index} className="flex items-center bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-200">
+                      <div className="flex-shrink-0 mr-4">
+                        {member.image ? (
+                          <img
+                            src={getImageUrl(member.image || '')}
+                            alt={member.name || 'SB Member'}
+                            className="w-24 h-24 rounded-lg object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold text-black mb-1">{member.name || 'SB Member'}</h3>
+                        <p className="text-lg text-gray-600">{member.position || 'Sangguniang Bayan Member'}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Calendar of Activities and Recent Legislative Activity Section */}
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* Calendar of Activities Section */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+            {/* Title Section */}
+            <div className="bg-amber-800 px-8 py-4 sm:py-6">
+              <div className="text-center">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
+                  Calendar of Activities
+                </h2>
+              </div>
+            </div>
           
           {/* Content Section */}
-          <div className="p-4 sm:p-6 bg-white">
-          {activities.length > 0 ? (
-            <div className="space-y-4">
-              {activities.slice(0, 3).map((activity) => (
+            <div className="p-4 sm:p-6 bg-white">
+            {activities.filter(activity => activity.status !== 'completed').length > 0 ? (
+              <div className="space-y-4">
+                {activities.filter(activity => activity.status !== 'completed').slice(0, 3).map((activity) => (
                 <div key={activity._id} className="bg-white/90 backdrop-blur-sm rounded-lg border-l-4 border-yellow-600 p-3 hover:bg-white/95 transition-colors duration-200 shadow-sm border border-gray-100">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex-1">
@@ -573,6 +783,83 @@ const Home: React.FC = () => {
               <p className="text-gray-500 text-sm mt-2">Check back later for updates on community events and meetings</p>
             </div>
           )}
+            </div>
+          </div>
+
+          {/* Recent Legislative Activity Section */}
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+            {/* Title Section */}
+            <div className="bg-amber-800 px-8 py-4 sm:py-6">
+              <div className="text-center">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
+                  Recent Legislative Activity
+                </h2>
+              </div>
+            </div>
+            
+            {/* Content Section */}
+            <div className="p-4 sm:p-6 bg-white">
+            {activities.filter(activity => activity.status === 'completed').length > 0 ? (
+              <div className="space-y-4">
+                {activities.filter(activity => activity.status === 'completed').slice(0, 3).map((activity) => (
+                  <div key={activity._id} className="bg-white/90 backdrop-blur-sm rounded-lg border-l-4 border-green-600 p-3 hover:bg-white/95 transition-colors duration-200 shadow-sm border border-gray-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold text-black mb-1">{activity.title}</h3>
+                        <p className="text-black text-base mb-1">{activity.description}</p>
+                        <div className="flex flex-wrap gap-6 text-base text-black">
+                          <span className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {new Date(activity.date).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </span>
+                          <span className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {activity.time}
+                          </span>
+                          <span className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {activity.location}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-base text-black">
+                          <span className="font-medium">Organizer:</span> {activity.organizer}
+                          {activity.contactInfo && (
+                            <span className="ml-6">
+                              <span className="font-medium">Contact:</span> {activity.contactInfo}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-1 sm:mt-0 sm:ml-4">
+                        <span className="inline-block px-6 py-3 rounded-full text-lg font-bold bg-green-100 text-green-800">
+                          Completed
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-gray-400 text-lg">No recent completed activities</p>
+                <p className="text-gray-500 text-sm mt-2">Check back later for updates on completed legislative activities</p>
+              </div>
+            )}
+            </div>
           </div>
         </div>
       </div>
@@ -665,6 +952,123 @@ const Home: React.FC = () => {
         </div>
       )}
 
+      {/* Bids & Awards Section */}
+      {bidAwards.length > 0 && (
+        <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+            {/* Title Section */}
+            <div className="bg-amber-800 px-8 py-4 sm:py-6">
+              <div className="text-center">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
+                  Bids & Awards
+                </h2>
+              </div>
+            </div>
+            
+            {/* Content Section */}
+            <div className="p-4 sm:p-6 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {bidAwards.slice(0, 3).map((bidAward, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                    {bidAward?.image ? (
+                      <div className="h-40 sm:h-48 bg-gray-200">
+                        <img
+                          src={getImageUrl(bidAward.image)}
+                          alt={bidAward.awardName || "Bid Award"}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-40 sm:h-48 bg-gray-200 flex items-center justify-center">
+                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="p-3 sm:p-4">
+                      <h3 className="font-semibold text-black mb-2 line-clamp-2 text-sm sm:text-base">{bidAward?.awardName || 'Award Name'}</h3>
+                      <p className="text-black text-xs sm:text-sm mb-3 line-clamp-3">{bidAward?.description || 'Description not available'}</p>
+                      <div className="text-xs text-black space-y-1">
+                        {bidAward?.contractor && (
+                          <div><span className="font-medium text-black">Contractor:</span> {bidAward.contractor}</div>
+                        )}
+                        {bidAward?.dateAwarded && (
+                          <div><span className="font-medium text-black">Date:</span> {new Date(bidAward.dateAwarded).toLocaleDateString()}</div>
+                        )}
+                        {bidAward?.amount && (
+                          <div><span className="font-medium text-black">Amount:</span> ₱{bidAward.amount.toLocaleString()}</div>
+                        )}
+                        {bidAward?.status && (
+                          <div><span className="font-medium text-black">Status:</span>
+                            <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                              bidAward.status === 'Active' ? 'bg-green-100 text-green-800' :
+                              bidAward.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {bidAward.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {bidAward?.document && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => downloadDocument(bidAward)}
+                            className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
+                          >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Download Document
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {bidAwards.length > 3 && (
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => setShowBidAwardsModal(true)}
+                    className="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors duration-200 font-semibold"
+                  >
+                    View All Bids & Awards
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report/Concern Form Section */}
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+          {/* Title Section */}
+          <div className="bg-amber-800 px-8 py-4 sm:py-6">
+            <div className="text-center">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
+                Report a Concern
+              </h2>
+            </div>
+          </div>
+          
+          {/* Content Section */}
+          <div className="p-4 sm:p-6 bg-white">
+            <div className="text-center">
+              <p className="text-gray-600 mb-6">Have a concern or report to file? Let us know and we'll address it promptly.</p>
+              <button
+                onClick={() => setShowFormModal(true)}
+                className="bg-yellow-600 text-white px-8 py-4 rounded-lg hover:bg-yellow-700 transition-colors duration-200 font-semibold text-lg"
+              >
+                File a Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
 
       {/* Individual Item Modal */}
@@ -749,6 +1153,208 @@ const Home: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Bids & Awards Modal */}
+      {showBidAwardsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
+            <div className="p-4 sm:p-6">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-black pr-2">All Bids & Awards</h2>
+                <button
+                  onClick={() => setShowBidAwardsModal(false)}
+                  className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {bidAwards.map((bidAward, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                    {bidAward?.image ? (
+                      <div className="h-40 sm:h-48 bg-gray-200">
+                        <img
+                          src={getImageUrl(bidAward.image)}
+                          alt={bidAward.awardName || "Bid Award"}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-40 sm:h-48 bg-gray-200 flex items-center justify-center">
+                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="p-3 sm:p-4">
+                      <h3 className="font-semibold text-black mb-2 line-clamp-2 text-sm sm:text-base">{bidAward?.awardName || 'Award Name'}</h3>
+                      <p className="text-black text-xs sm:text-sm mb-3 line-clamp-3">{bidAward?.description || 'Description not available'}</p>
+                      <div className="text-xs text-black space-y-1">
+                        {bidAward?.contractor && (
+                          <div><span className="font-medium text-black">Contractor:</span> {bidAward.contractor}</div>
+                        )}
+                        {bidAward?.dateAwarded && (
+                          <div><span className="font-medium text-black">Date:</span> {new Date(bidAward.dateAwarded).toLocaleDateString()}</div>
+                        )}
+                        {bidAward?.amount && (
+                          <div><span className="font-medium text-black">Amount:</span> ₱{bidAward.amount.toLocaleString()}</div>
+                        )}
+                        {bidAward?.status && (
+                          <div><span className="font-medium text-black">Status:</span>
+                            <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                              bidAward.status === 'Active' ? 'bg-green-100 text-green-800' :
+                              bidAward.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {bidAward.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {bidAward?.document && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => downloadDocument(bidAward)}
+                            className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
+                          >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Download Document
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report/Concern Form Modal */}
+      {showFormModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
+            <div className="p-4 sm:p-6">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-black pr-2">File a Report</h2>
+                <button
+                  onClick={() => setShowFormModal(false)}
+                  className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Name *</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Email *</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Concern Type *</label>
+                    <select
+                      name="concernType"
+                      value={formData.concernType}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    >
+                      <option value="">Select a concern type</option>
+                      <option value="complaint">Complaint</option>
+                      <option value="suggestion">Suggestion</option>
+                      <option value="inquiry">Inquiry</option>
+                      <option value="report">Report</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-1">Message *</label>
+                    <textarea
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      required
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors duration-200"
+                  >
+                    Submit Report
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Modals */}
+      <>
+        <NotificationModal
+          isOpen={notificationModal.isOpen}
+          onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+          title={notificationModal.title}
+          message={notificationModal.message}
+          type={notificationModal.type}
+        />
+
+        <ConfirmationModal
+          isOpen={confirmationModal.isOpen}
+          onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+          onConfirm={confirmationModal.onConfirm}
+          title={confirmationModal.title}
+          message={confirmationModal.message}
+          type={confirmationModal.type}
+          isLoading={confirmationModal.isLoading}
+        />
+      </>
     </div>
   );
 };

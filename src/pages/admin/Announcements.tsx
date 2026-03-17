@@ -11,8 +11,6 @@ const AdminAnnouncements: React.FC = () => {
   const [selectedAnnouncementIndex, setSelectedAnnouncementIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({ title: '', content: '', priority: 'Normal' as 'Urgent' | 'Normal' | 'Low' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [notificationModal, setNotificationModal] = useState({
     isOpen: false,
     title: '',
@@ -60,8 +58,6 @@ const AdminAnnouncements: React.FC = () => {
       setSelectedFile(null);
     }
     
-    setError('');
-    setSuccess('');
     setIsModalOpen(true);
   };
 
@@ -70,8 +66,6 @@ const AdminAnnouncements: React.FC = () => {
     setFormData({ title: '', content: '', priority: 'Normal' });
     setSelectedFile(null);
     setSelectedAnnouncementIndex(null);
-    setError('');
-    setSuccess('');
   };
 
   const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
@@ -96,8 +90,6 @@ const AdminAnnouncements: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
 
     try {
       if (selectedAnnouncementIndex !== null) {

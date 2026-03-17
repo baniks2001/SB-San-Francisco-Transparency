@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Resolution, ResolutionTemplate } from '../types';
 import api from '../services/api';
 import { getImageUrl, getLogoUrl } from '../utils/imageUtils';
+import NotificationModal from '../components/NotificationModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Resolutions: React.FC = () => {
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
@@ -10,6 +12,22 @@ const Resolutions: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResolution, setSelectedResolution] = useState<Resolution | null>(null);
+
+  // Modal states
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,8 +54,33 @@ const Resolutions: React.FC = () => {
       resolution.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       resolution.resolutionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       resolution.content.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
+    // Only show resolutions with Pending or Approved status
+    const isPublicStatus = resolution.status === 'Pending' || resolution.status === 'Approved';
+    return matchesStatus && matchesSearch && isPublicStatus;
   });
+
+  // Modal helper functions
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'info') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -429,7 +472,6 @@ ${absent.map((member: any, index: number) =>
               <option value="all">All Resolutions</option>
               <option value="Approved">Approved</option>
               <option value="Pending">Pending</option>
-              <option value="Rejected">Rejected</option>
             </select>
           </div>
         </div>
@@ -443,8 +485,8 @@ ${absent.map((member: any, index: number) =>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">No resolutions found</h3>
-          <p className="text-white">Try adjusting your search or filter criteria</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No resolutions found</h3>
+          <p className="text-gray-600">Try adjusting your search or filter criteria</p>
         </div>
       ) : (
         <div className="overflow-x-auto bg-white">
@@ -472,20 +514,20 @@ ${absent.map((member: any, index: number) =>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredResolutions.map((resolution) => (
-                  <tr key={resolution._id} className="bg-white">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
+                {filteredResolutions.map((resolution, index) => (
+                  <tr key={resolution._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {resolution.resolutionNumber}
                     </td>
-                    <td className="px-6 py-4 text-sm text-black">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       <div className="max-w-xs truncate" title={resolution.title}>
                         {resolution.title}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {resolution.series}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {resolution.author}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -593,6 +635,25 @@ ${absent.map((member: any, index: number) =>
           </div>
         </div>
       )}
+
+      {/* Modern Modals */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

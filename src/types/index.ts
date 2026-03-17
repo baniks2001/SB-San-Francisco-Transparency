@@ -209,6 +209,23 @@ export interface SystemSettings {
     priority: 'Urgent' | 'Normal' | 'Low';
     createdAt: string;
   }>;
+  bidAwards: Array<{
+    awardName: string;
+    description: string;
+    image?: string;
+    dateAwarded: string;
+    contractor: string;
+    amount: number;
+    status: 'Active' | 'Completed' | 'Cancelled';
+    createdAt: Date;
+  }>;
+  videos: Array<{
+    title: string;
+    description: string;
+    videoUrl: string;
+    thumbnail?: string;
+    createdAt: Date;
+  }>;
   copyrightText?: string;
   mapLocation?: {
     latitude: number;
@@ -276,6 +293,20 @@ export interface Activity {
   contactInfo?: string;
   image?: string;
   isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BidAward {
+  _id: string;
+  awardName: string;
+  description: string;
+  image?: string;
+  document?: string;
+  dateAwarded: string;
+  contractor: string;
+  amount: number;
+  status: 'Active' | 'Completed' | 'Cancelled';
   createdAt: string;
   updatedAt: string;
 }

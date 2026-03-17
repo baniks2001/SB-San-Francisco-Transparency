@@ -34,8 +34,6 @@ const AdminUsers: React.FC = () => {
   const [formData, setFormData] = useState<any>({});
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [notificationModal, setNotificationModal] = useState({
     isOpen: false,
@@ -66,7 +64,6 @@ const AdminUsers: React.FC = () => {
       setPositions(positionsResponse.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      setError('Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -95,9 +92,7 @@ const AdminUsers: React.FC = () => {
     }
     setSelectedFile(null);
     setIsUserModalOpen(true);
-    setError('');
-    setSuccess('');
-  };
+          };
 
   const openPositionModal = (type: 'create' | 'edit', position?: Position) => {
     setModalType(type);
@@ -117,9 +112,7 @@ const AdminUsers: React.FC = () => {
       });
     }
     setIsPositionModalOpen(true);
-    setError('');
-    setSuccess('');
-  };
+          };
 
   const closePositionModal = () => {
     setIsPositionModalOpen(false);
@@ -129,9 +122,7 @@ const AdminUsers: React.FC = () => {
       description: '',
       accessibleTabs: []
     });
-    setError('');
-    setSuccess('');
-  };
+          };
 
   const closeUserModal = () => {
     setIsUserModalOpen(false);
@@ -144,15 +135,11 @@ const AdminUsers: React.FC = () => {
       isActive: true
     });
     setSelectedFile(null);
-    setError('');
-    setSuccess('');
-  };
+          };
 
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
+        
     try {
       if (modalType === 'create') {
         await api.post('/users', formData);
@@ -181,9 +168,7 @@ const AdminUsers: React.FC = () => {
 
   const handlePositionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
+        
     try {
       if (modalType === 'create') {
         await api.post('/positions', formData);

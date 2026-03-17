@@ -23,6 +23,8 @@ import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
 import AdminTemplates from './pages/admin/Templates';
 import AdminHomeContent from './pages/admin/HomeandAboutContent';
+import AdminComplaintsAndConcerns from './pages/admin/ComplaintsAndConcerns';
+import AdminBidsandAwards from './pages/admin/BidsandAwards';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
@@ -60,11 +62,13 @@ function AppContent() {
           <Route path="ordinances" element={<AdminOrdinances />} />
           <Route path="home-content" element={<AdminHomeContent />} />
           <Route path="templates" element={<AdminTemplates />} />
+          <Route path="bidawards" element={<AdminBidsandAwards />} />
           <Route path="procurements" element={<AdminProcurements />} />
           <Route path="budgets" element={<AdminBudgets />} />
           <Route path="vacancies" element={<AdminVacancies />} />
           <Route path="applications" element={<AdminApplications />} />
           <Route path="announcements" element={<AdminAnnouncements />} />
+          <Route path="complaints" element={<AdminComplaintsAndConcerns />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

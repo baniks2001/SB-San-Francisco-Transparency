@@ -102,7 +102,6 @@ const AdminResolutions: React.FC = () => {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const [notificationModal, setNotificationModal] = useState({
     isOpen: false,
     title: '',
@@ -131,7 +130,7 @@ const AdminResolutions: React.FC = () => {
       console.log('First resolution templateId type:', typeof response.data[0]?.templateId);
       setResolutions(response.data);
     } catch (err) {
-      setError('Failed to fetch resolutions');
+      console.error('Failed to fetch resolutions:', err);
     }
   };
 
@@ -168,8 +167,7 @@ const AdminResolutions: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-
+    
     try {
       // Preserve existing templateId when editing a resolution that already has one
       const finalTemplateId = editingResolution && editingResolution.templateId 
@@ -404,8 +402,7 @@ const AdminResolutions: React.FC = () => {
     }
     setSelectedFile(null);
     setIsModalOpen(true);
-    setError('');
-  };
+      };
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -482,8 +479,7 @@ const AdminResolutions: React.FC = () => {
       }
     });
     setSelectedFile(null);
-    setError('');
-  };
+      };
 
   const viewDocument = (resolution: Resolution) => {
     console.log('Viewing resolution:', resolution);

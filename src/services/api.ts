@@ -16,6 +16,17 @@ const retryRequest = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000):
 
 // API URL with network support and fallback
 const getApiBaseUrl = () => {
+  // Check if running in dev tunnel
+  const isDevTunnel = window.location.hostname.includes('asse.devtunnels.ms') ||
+                     window.location.hostname.includes('loca.lt') ||
+                     window.location.hostname.includes('ngrok');
+  
+  if (isDevTunnel) {
+    // Use the same tunnel domain but port 5000 for API
+    const tunnelHost = window.location.hostname;
+    return `https://${tunnelHost.replace('-3000', '-5000')}/api`;
+  }
+  
   // Try network URL first, fallback to localhost
   const networkUrl = process.env.REACT_APP_NETWORK_API_URL;
   const localUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';

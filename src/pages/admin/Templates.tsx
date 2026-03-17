@@ -48,8 +48,6 @@ const AdminTemplates: React.FC = () => {
     paperSize: 'A4',
     defaultPageCount: 1
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [notificationModal, setNotificationModal] = useState({
     isOpen: false,
     title: '',
@@ -75,7 +73,7 @@ const AdminTemplates: React.FC = () => {
       const response = await api.get('/templates');
       setTemplates(response.data);
     } catch (err: any) {
-      setError('Failed to fetch templates');
+      console.error('Failed to fetch templates:', err);
     } finally {
       setIsLoading(false);
     }
@@ -156,9 +154,7 @@ const AdminTemplates: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
+        
     try {
       // Create template data without logos to prevent backend hanging
       const templateData = cleanTemplateData({
@@ -173,11 +169,9 @@ const AdminTemplates: React.FC = () => {
       if (editingTemplate) {
         await api.put(`/templates/${editingTemplate._id}`, templateData);
         templateId = editingTemplate._id;
-        setSuccess('Template updated successfully!');
       } else {
         const response = await api.post('/templates', templateData);
         templateId = response.data._id;
-        setSuccess('Template created successfully!');
       }
 
       // Upload logos separately if they exist
@@ -270,8 +264,6 @@ const AdminTemplates: React.FC = () => {
       });
     }
     setIsModalOpen(true);
-    setError('');
-    setSuccess('');
   };
 
   const closeModal = () => {
@@ -292,9 +284,7 @@ const AdminTemplates: React.FC = () => {
       paperSize: 'A4',
       defaultPageCount: 1
     });
-    setError('');
-    setSuccess('');
-  };
+          };
 
   const addHeaderText = () => {
     const newText = {

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Ordinance } from '../types';
 import api from '../services/api';
 import { getImageUrl } from '../utils/imageUtils';
+import NotificationModal from '../components/NotificationModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Ordinances: React.FC = () => {
   const [ordinances, setOrdinances] = useState<Ordinance[]>([]);
@@ -9,6 +11,22 @@ const Ordinances: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrdinance, setSelectedOrdinance] = useState<Ordinance | null>(null);
+
+  // Modal states
+  const [notificationModal, setNotificationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info' as 'danger' | 'warning' | 'info',
+    isLoading: false
+  });
 
   useEffect(() => {
     const fetchOrdinances = async () => {
@@ -33,6 +51,29 @@ const Ordinances: React.FC = () => {
       ordinance.content.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+
+  // Modal helper functions
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setNotificationModal({
+      isOpen: true,
+      title,
+      message,
+      type
+    });
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, type: 'danger' | 'warning' | 'info' = 'info') => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type,
+      isLoading: false
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -104,50 +145,50 @@ const Ordinances: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">No ordinances found</h3>
-          <p className="text-white">Try adjusting your search or filter criteria</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No ordinances found</h3>
+          <p className="text-gray-600">Try adjusting your search or filter criteria</p>
         </div>
       ) : (
         <div className="bg-white shadow overflow-hidden rounded-md">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Ordinance No.
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Series
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Author
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOrdinances.map((ordinance) => (
-                  <tr key={ordinance._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
+                {filteredOrdinances.map((ordinance, index) => (
+                  <tr key={ordinance._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {ordinance.ordinanceNumber}
                     </td>
-                    <td className="px-6 py-4 text-sm text-black">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       <div className="max-w-xs truncate" title={ordinance.title}>
                         {ordinance.title}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {ordinance.series}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {ordinance.author}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -244,6 +285,25 @@ const Ordinances: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modern Modals */}
+      <NotificationModal
+        isOpen={notificationModal.isOpen}
+        onClose={() => setNotificationModal(prev => ({ ...prev, isOpen: false }))}
+        title={notificationModal.title}
+        message={notificationModal.message}
+        type={notificationModal.type}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        isLoading={confirmationModal.isLoading}
+      />
     </div>
   );
 };

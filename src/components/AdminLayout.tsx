@@ -20,10 +20,12 @@ const AdminLayout: React.FC = () => {
     { name: 'Resolutions', path: '/admin/resolutions', icon: '📄' },
     { name: 'Ordinances', path: '/admin/ordinances', icon: '📋' },
     { name: 'Templates', path: '/admin/templates', icon: '📝' },
+    { name: 'Bids & Awards', path: '/admin/bidawards', icon: '🏆' },
     { name: 'Procurement and Budget', path: '/admin/procurements', icon: '💰' },
     { name: 'Vacancy & Hiring', path: '/admin/vacancies', icon: '👥' },
     { name: 'Applications', path: '/admin/applications', icon: '📋' },
     { name: 'Announcement', path: '/admin/announcements', icon: '📢' },
+    { name: 'Complaints & Concerns', path: '/admin/complaints', icon: '🚨' },
     ...(user?.role === 'System Administrator' ? [
       { name: 'Manage Accounts', path: '/admin/users', icon: '👤' },
       { name: 'System Settings', path: '/admin/settings', icon: '⚙️' }

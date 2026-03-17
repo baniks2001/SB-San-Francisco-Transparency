@@ -4,11 +4,12 @@ import SystemSettings from '../models/SystemSettings';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { uploadSingle, uploadMultiple } from '../middleware/upload';
 import { body, validationResult } from 'express-validator';
+import { cacheMiddleware, clearCache } from '../middleware/cache';
 
 const router = express.Router();
 
-// Get system settings (public)
-router.get('/', async (req: Request, res: Response) => {
+// Get system settings (public) - cached for 5 minutes
+router.get('/', cacheMiddleware(300000), async (req: Request, res: Response) => {
   try {
     let settings = await SystemSettings.findOne();
     
@@ -45,6 +46,7 @@ router.get('/', async (req: Request, res: Response) => {
         organizationStructure: [],
         carouselImages: [],
         projectImages: [],
+        bidAwards: [],
         copyrightText: `© ${new Date().getFullYear()} Sangguniang Bayan, San Francisco, Southern Leyte. All rights reserved.`,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -75,8 +77,11 @@ router.put('/',
       Object.assign(settings, req.body);
       settings.updatedAt = new Date();
       await settings.save();
-      
-      res.json({ message: 'Settings updated successfully', settings });
+
+      // Clear cache after update
+      clearCache('/api/settings');
+
+      res.json(settings);
     } catch (error) {
       console.error('Update system settings error:', error);
       res.status(500).json({ message: 'Server error' });
@@ -112,6 +117,9 @@ router.post('/logos',
       settings.systemLogos = [...settings.systemLogos, ...newLogos].slice(0, 3);
       settings.updatedAt = new Date();
       await settings.save();
+
+      // Clear cache after update
+      clearCache('/api/settings');
 
       res.json({ message: 'Logos uploaded successfully', settings });
     } catch (error) {
@@ -491,6 +499,9 @@ router.post('/announcements',
       settings.announcements.push(newAnnouncement);
       await settings.save();
       
+      // Clear cache after update
+      clearCache('/api/settings');
+
       res.status(201).json({ message: 'Announcement added successfully', announcement: newAnnouncement });
     } catch (error) {
       console.error('Add announcement error:', error);

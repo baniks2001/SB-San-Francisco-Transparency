@@ -88,8 +88,7 @@ const Announcements: React.FC = () => {
 
   return (
     <div className="flex-1 bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-black">Announcements</h1>
@@ -100,14 +99,13 @@ const Announcements: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-black mb-2">Search Announcements</label>
+              <label className="block text-sm font-medium text-white mb-2">Search Announcements</label>
               <input
                 type="text"
                 placeholder="Search by title or content..."
@@ -117,7 +115,7 @@ const Announcements: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-black mb-2">Filter by Priority</label>
+              <label className="block text-sm font-medium text-white mb-2">Filter by Priority</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
@@ -140,8 +138,8 @@ const Announcements: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-black mb-2">No announcements found</h3>
-            <p className="text-black">Try adjusting your search or filter criteria</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No announcements found</h3>
+            <p className="text-gray-600">Try adjusting your search or filter criteria</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -155,7 +153,7 @@ const Announcements: React.FC = () => {
                     </span>
                   </div>
                   
-                  <h3 className="text-lg font-semibold text-black mb-2 line-clamp-2">{announcement.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{announcement.title}</h3>
                   
                   <p className="text-gray-600 text-sm mb-3 line-clamp-3">{announcement.content}</p>
                   
@@ -182,7 +180,7 @@ const Announcements: React.FC = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-black">{selectedAnnouncement.title}</h3>
+              <h3 className="text-xl font-bold text-gray-900">{selectedAnnouncement.title}</h3>
               <button
                 onClick={closeViewModal}
                 className="text-black hover:text-black"
@@ -215,7 +213,7 @@ const Announcements: React.FC = () => {
               )}
 
               <div className="prose max-w-none">
-                <p className="text-black leading-relaxed whitespace-pre-wrap">{selectedAnnouncement.content}</p>
+                <p className="text-gray-900 leading-relaxed whitespace-pre-wrap">{selectedAnnouncement.content}</p>
               </div>
             </div>
 

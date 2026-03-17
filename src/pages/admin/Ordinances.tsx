@@ -90,7 +90,6 @@ const AdminOrdinances: React.FC = () => {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const [notificationModal, setNotificationModal] = useState({
     isOpen: false,
     title: '',
@@ -116,7 +115,7 @@ const AdminOrdinances: React.FC = () => {
       const response = await api.get('/ordinances');
       setOrdinances(response.data);
     } catch (err) {
-      setError('Failed to fetch ordinances');
+      console.error('Failed to fetch ordinances:', err);
     }
   };
 
@@ -152,8 +151,7 @@ const AdminOrdinances: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-
+    
     try {
       const ordinanceData = {
         ...formData,
@@ -344,8 +342,7 @@ const AdminOrdinances: React.FC = () => {
     }
     setSelectedFile(null);
     setIsModalOpen(true);
-    setError('');
-  };
+      };
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -413,8 +410,7 @@ const AdminOrdinances: React.FC = () => {
       }
     });
     setSelectedFile(null);
-    setError('');
-  };
+      };
 
   const addAttestedBy = () => {
     const newAttestedBy = {

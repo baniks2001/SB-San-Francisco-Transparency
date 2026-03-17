@@ -12,6 +12,21 @@ export const getApiBaseUrl = (): string => {
   const hostname = window.location.hostname;
   const currentPort = window.location.port;
   
+  // Check if running in dev tunnel
+  const isDevTunnel = hostname.includes('asse.devtunnels.ms') ||
+                     hostname.includes('loca.lt') ||
+                     hostname.includes('ngrok');
+  
+  if (isDevTunnel) {
+    // Use the same tunnel domain but port 5000 for API
+    // Replace -3000 with -5000 for dev tunnels
+    if (hostname.includes('-3000')) {
+      return `${protocol}//${hostname.replace('-3000', '-5000')}`;
+    }
+    // For other tunnels, just change the port concept
+    return `${protocol}//${hostname}`;
+  }
+  
   // API port configuration
   const apiPort = process.env.REACT_APP_API_PORT || '5000';
   
